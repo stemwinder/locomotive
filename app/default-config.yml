@@ -1,0 +1,12 @@
+lftp-path:
+private-keyfile:
+public-keyfile:
+username:
+password:
+working-dir:
+speed-limit: 0
+connection-limit: 25
+transfer-limit: 3
+newer-than:
+remove-source: false
+prowl-api:

@@ -1,0 +1,34 @@
+{
+    "name": "stemwinder/locomotive",
+    "description": "A PHP command line app providing scheduled, aggressive file fetching using segmented and parallel transfers.",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Joshua Smith",
+            "email": "josh@stemwinder.net"
+        }
+    ],
+    "require": {
+        "php": ">=5.6.14",
+        "ext-ssh2": "*",
+        "ext-sqlite3": "*",
+        "psr/log": "~1.0",
+        "illuminate/database": "~5.1",
+        "illuminate/support": "~5.1",
+        "nesbot/carbon": "~1.21",
+        "symfony/console": "~2.7",
+        "symfony/config": "~2.7",
+        "symfony/yaml": "~2.7",
+        "symfony/finder": "~2.7"
+    },
+    "require-dev": {
+        "robmorgan/phinx": "~0.4",
+        "symfony/var-dumper": "~2.7",
+        "phpunit/phpunit": "~4.8"
+    },
+    "autoload": {
+        "psr-4": {
+            "Locomotive\\": "src/Locomotive"
+        }
+    }
+}

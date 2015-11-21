@@ -110,6 +110,12 @@ class Locomote extends Command
                 InputOption::VALUE_REQUIRED,
                 'Global concurrent item transfer limit (defaults to 5)'
             )
+            ->addOption(
+                'max-retries',
+                'm',
+                InputOption::VALUE_REQUIRED,
+                'Maximum retry attempts for a failed or interrupted transfer'
+            )
         ;
     }
 

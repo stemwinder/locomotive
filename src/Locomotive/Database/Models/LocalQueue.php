@@ -15,9 +15,12 @@
 namespace Locomotive\Database\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class LocalQueue extends Model
 {
+	use SoftDeletes;
+
 	protected $guarded = ['id'];
 	protected $table = 'queue';
 
@@ -40,5 +43,10 @@ class LocalQueue extends Model
 	public function scopeNotMoved($query)
 	{
 		return $query->where('is_moved', false);
+	}
+
+	public function scopeNotThisRun($query, $runId)
+	{
+		return $query->where('run_id', '!=', $runId);
 	}
 }

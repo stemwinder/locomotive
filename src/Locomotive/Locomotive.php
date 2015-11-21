@@ -65,6 +65,13 @@ class Locomotive
     public $lastRun;
 
     /**
+     * A unique run ID.
+     *
+     * @var String
+     **/
+    public $runId;
+
+    /**
      * Whether or not lftp has a background proc running.
      *
      * @var Bool
@@ -164,6 +171,8 @@ class Locomotive
         $this->lastRun = isset($metrics->last_run) ? Carbon::parse($metrics->last_run) : $now;
         $metrics->last_run = $now->toDateTimeString();
         $metrics->save();
+
+        $this->runId = uniqid();
 
         // setting working directory
         if (null == $this->options['working-dir']) {
@@ -413,14 +422,13 @@ class Locomotive
         if (! isset($this->mappedQueue)) {
             // a backgrounded lftp queue was never detected; assume it has cleared
             // since last run and check local items
-            $localQueue = LocalQueue::active()->get();
+            $localQueue = LocalQueue::notThisRun($this->runId)->active()->get();
+            dump($localQueue);
         } else {
-            $mappedQueue = $this->mappedQueue;
-
             // get all active items from local DB queue that don't exist
             // in mapped queue
-            $localQueue = LocalQueue::active()
-                ->lftpActive($mappedQueue->keys())
+            $localQueue = LocalQueue::notThisRun($this->runId)->active()
+                ->lftpActive($this->mappedQueue->keys())
                 ->get();
         }
 
@@ -442,14 +450,12 @@ class Locomotive
                 if ($finderItem != false) {
                     $itemSize = $this->calculateItemSize($finderItem);
 
-                    // mark as inactive
-                    $item->is_active = false;
-
                     // check file size and mark as finished
                     if (
                         $item->size_bytes == $itemSize['itemSize']
                         && $item->file_count == $itemSize['fileCount']
                     ) {
+                        $item->is_active = false;
                         $item->is_finished = true;
                     }
                     
@@ -488,6 +494,7 @@ class Locomotive
         // write the item to the local DB queue
         $localQueue = LocalQueue::create([
             'hash' => $hash,
+            'run_id' => $this->runId,
             'name' => $item->getBasename(),
             'host' => $this->arguments['host'],
             'source_dir' => $transferPath,
@@ -633,6 +640,8 @@ class Locomotive
             $workingDir = $this->options['working-dir'];
 
             $finished->each(function($item, $key) use ($workingDir) {
+                // TODO: check for existance of target directory
+
                 // move item
                 $targetDir = rtrim($item->target_dir, '/') . '/';
                 exec("mv {$workingDir}{$item->name} {$targetDir} 2>&1", $output, $exitCode);
@@ -735,7 +744,7 @@ class Locomotive
         $items->transform(function(&$sourceItems, $sourceDir) use ($seen) {
             return $sourceItems->reject(function($item) use ($seen) {
                 if (
-                    // filter out items that don't meet a date criteria
+                    // TODO: filter out items that don't meet a date criteria
                     $item->getMTime() > strtotime($this->options['newer-than'])
                 ) {
                     // filter out items seen in the local queue

@@ -29,6 +29,7 @@ class InitializeDatabase extends AbstractMigration
     {
         $table = $this->table('queue');
         $table->addColumn('hash', 'string')
+              ->addColumn('run_id', 'string')
               ->addColumn('name', 'string')
               ->addColumn('host', 'string', ['null' => true])
               ->addColumn('source_dir', 'string', ['null' => true])
@@ -42,8 +43,9 @@ class InitializeDatabase extends AbstractMigration
               ->addColumn('is_moved', 'boolean', ['default' => false])
               ->addColumn('created_at', 'timestamp')
               ->addColumn('updated_at', 'timestamp')
+              ->addColumn('deleted_at', 'timestamp', ['null' => true])
               ->create();
-        $table->addIndex(['hash'])
+        $table
               ->addIndex(['category'])
               ->update();
 

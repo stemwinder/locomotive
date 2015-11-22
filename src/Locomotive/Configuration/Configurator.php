@@ -149,8 +149,14 @@ class Configurator
 
         // protects `remove-source` from being set as `true` if null
         foreach ($configs as $configType => &$values) {
-            if (! isset($values['remove-source']) || is_null($values['remove-source'])) {
-               $values['remove-source'] = false;
+            if (
+                isset($values['remove-sources'])
+                && (
+                    ! isset($values['remove-sources']['remove'])
+                    || is_null($values['remove-sources']['remove'])
+                )
+            ) {
+               $values['remove-sources']['remove'] = false;
             }
         }
 

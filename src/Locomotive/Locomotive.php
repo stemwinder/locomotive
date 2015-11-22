@@ -681,8 +681,8 @@ class Locomotive
      **/
     public function removeSourceFiles()
     {
-        if ($this->options['remove-source'] !== true) {
-            return;
+        if ($this->options['remove-sources']['remove'] !== true) {
+            return $this;
         }
 
         $this->logger->debug('Beginning source file removal.');
@@ -695,6 +695,17 @@ class Locomotive
 
         if ($finished->count() > 0) {
             $fs = new Filesystem();
+
+            // applying source exclusion from config
+            if (count($this->options['remove-sources']['exclude']) > 0) {
+                $finished = $finished->reject(function($item) {
+                    foreach ($this->options['remove-sources']['exclude'] as $exclusion) {
+                        if (strstr(trim($exclusion, '/'), trim($item->source_dir, '/'))) {
+                            return true;
+                        }
+                    }
+                });
+            }
 
             $finished->each(function($item, $key) use ($fs) {
                 $sourceItemPath = rtrim($item->source_dir, '/') . '/' . $item->name;

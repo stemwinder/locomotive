@@ -9,5 +9,7 @@ connection-limit: 25
 transfer-limit: 3
 max-retries: 5
 newer-than:
-remove-source: false
+remove-sources:
+  remove: false
+  exclude:
 prowl-api:

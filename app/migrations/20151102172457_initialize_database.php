@@ -38,15 +38,17 @@ class InitializeDatabase extends AbstractMigration
               ->addColumn('file_count', 'integer', ['null' => true])
               ->addColumn('last_modified', 'string', ['null' => true])
               ->addColumn('started_at', 'timestamp', ['null' => true])
-              ->addColumn('is_active', 'boolean', ['default' => false])
+              ->addColumn('retries', 'integer', ['null' => false, 'default' => 0])
               ->addColumn('is_finished', 'boolean', ['default' => false])
+              ->addColumn('is_failed', 'boolean', ['default' => false])
               ->addColumn('is_moved', 'boolean', ['default' => false])
               ->addColumn('created_at', 'timestamp')
               ->addColumn('updated_at', 'timestamp')
               ->addColumn('deleted_at', 'timestamp', ['null' => true])
               ->create();
-        $table
-              ->addIndex(['category'])
+        $table->addIndex(['hash'])
+              ->addIndex(['run_id'])
+              ->addIndex(['name'])
               ->update();
 
         $table = $this->table('metrics');

@@ -370,27 +370,27 @@ class Locomotive
         // create a merged list of all lftp queue items
         $mergedLftpQueue = $activeItems->merge($queuedItems);
 
-        // get all active items from local DB queue
-        $localQueue = LocalQueue::active()->get();
+        // get all unfinished items from local DB queue
+        $localQueue = LocalQueue::notFinished()->get();
 
         // map lftp queue items to local DB queue items
-        $mappedQueue = array();
-        $localQueue->each(function($localItem, $key) use (&$mappedQueue, $mergedLftpQueue) {
+        $mappedQueue = new Collection;
+        $localQueue->each(function($localItem, $key) use ($mappedQueue, $mergedLftpQueue) {
             $mappedItem = $mergedLftpQueue->search(function($aItem, $aKey) use ($localItem) {
                 return strstr($aItem, $localItem->name);
             });
 
             if ($mappedItem !== false) {
-                $mappedQueue[$localItem->id] = $mergedLftpQueue->get($mappedItem);
+                $mappedQueue->put($localItem->id, $mappedItem);
             }
         });
 
         // set class variable with count of current active items
-        $this->lftpQueueCount = count($mappedQueue);
+        $this->lftpQueueCount = $mappedQueue->count();
         $this->logger->debug("Recording the lftp queue count as $this->lftpQueueCount");
 
         // set class variable with mapped queue
-        $this->mappedQueue = Collection::make($mappedQueue);
+        $this->mappedQueue = $mappedQueue;
 
         // TODO: parse stats
         /*$parsedQueue = array();
@@ -417,36 +417,34 @@ class Locomotive
     {
         $this->logger->debug('Beginning local DB queue update.');
 
-        // TODO: update active items with completion percentage.
-
         if (! isset($this->mappedQueue)) {
             // a backgrounded lftp queue was never detected; assume it has cleared
             // since last run and check local items
-            $localQueue = LocalQueue::notThisRun($this->runId)->active()->get();
-            dump($localQueue);
+            $localQueue = LocalQueue::notForRun($this->runId)
+                ->notFinished()
+                ->notFailed()
+                ->get();
         } else {
-            // get all active items from local DB queue that don't exist
-            // in mapped queue
-            $localQueue = LocalQueue::notThisRun($this->runId)->active()
+            // get all unfinished items from local DB queue that don't exist
+            // in mapped queue (aren't currently active in lftp)
+            $localQueue = LocalQueue::notForRun($this->runId)
+                ->notFinished()
+                ->notFailed()
                 ->lftpActive($this->mappedQueue->keys())
                 ->get();
         }
 
-        // check for items marked as active but not in lftp queue and
-        // mark as finsihed if size and mod time logic checks out.
+        // mark items finished if file size matches
         if ($localQueue->count() > 0) {
-            $this->logger->debug('Active items found in local queue. Check for completeness.');
+            $this->logger->debug('Unfinished items found in local queue. Checking for completeness.');
 
-            $workingDir = $this->options['working-dir'];
-
-            $localQueue->each(function($item, $key) use ($workingDir) {
+            $localQueue->each(function($item, $key) {
+                // seeking to file location
                 $finderItem = new Finder();
-                $finderItem->in($workingDir)
+                $finderItem->in($this->options['working-dir'])
                            ->name($item->name);
                 $finderItem = current(iterator_to_array($finderItem));
 
-                // test `$finderItem` to prevent item transfers started on this run
-                // that wouldn't be available in the lftp queue yet.
                 if ($finderItem != false) {
                     $itemSize = $this->calculateItemSize($finderItem);
 
@@ -455,20 +453,24 @@ class Locomotive
                         $item->size_bytes == $itemSize['itemSize']
                         && $item->file_count == $itemSize['fileCount']
                     ) {
-                        $item->is_active = false;
                         $item->is_finished = true;
+                        $item->save();
+                    } else {
+                        // mark item as failed if there is a size or count mismatch
+                        $item->is_failed = true;
+                        $item->save();
                     }
-                    
+                } else {
+                    // mark item as failed if it can't be found locally
+                    $item->is_failed = true;
                     $item->save();
                 }
-            });
-        } else {
-            $this->logger->debug('No active items were returned from the local DB queue.');
-        }
 
-        // TODO: handle all local queue items marked as inactive and unfinished
-        // by re-enqueueing up to a maximum [n] times. Will need to modify
-        // `$this->filterSourceItems()`.
+                // TODO: handle all local queue items marked as inactive and unfinished
+                // by re-enqueueing up to a maximum [n] times. Will need to modify
+                // `$this->filterSourceItems()`.
+            });
+        }
         
         return $this;
     }
@@ -501,7 +503,6 @@ class Locomotive
             'size_bytes' => $itemSize['itemSize'],
             'file_count' => $itemSize['fileCount'],
             'last_modified' => date('Y-m-d H:i:s', $item->getMTime()),
-            'is_active' => true,
             'started_at' => date('Y-m-d H:i:s'),
             'target_dir' => $target,
         ]);

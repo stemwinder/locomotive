@@ -192,12 +192,12 @@ class Locomote extends Command
         $locomotive->updateLocalQueue();
 
         // TODO: source-side file cleanup (if enabled via options)
-        $locomotive->removeSourceFiles();
+        // $locomotive->removeSourceFiles();
 
         // move finished local transfered items to their final target detination
         $locomotive->moveFinished();
         
-        // write main status to output
+        // write main status to output: new transfers
         if ($locomotive->newTransfers) {
             $output->writeln('New transfers were started:');
             $messageLines = array();
@@ -210,8 +210,9 @@ class Locomote extends Command
             $output->writeln('Locomotive did not start any new transfers.');
         }
 
+        // write main status to output: moved items
         if ($locomotive->movedItems) {
-            $output->writeln('Finished transfers were moved:');
+            $output->writeln('Finished items were moved:');
             $messageLines = array();
             $locomotive->movedItems->each(function($item) use (&$messageLines) {
                 $messageLines[] = $item->name;

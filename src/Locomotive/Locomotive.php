@@ -539,7 +539,7 @@ class Locomotive
                 // no transfers occured for program output
                 $this->newTransfers = false;
 
-                return;
+                return $this;
             } else {
                 $this->logger->info("Setting available transfer slots to $availableSlots.");
             }
@@ -640,31 +640,29 @@ class Locomotive
         if ($finished->count() > 0) {
             $this->logger->debug('Finished items were found in the local queue.');
             $workingDir = $this->options['working-dir'];
+            $fs = new Filesystem();
 
-            $finished->each(function($item, $key) use ($workingDir) {
+            $finished->each(function($item, $key) use ($workingDir, $fs) {
                 // move item
                 $targetDir = rtrim($item->target_dir, '/') . '/';
 
                 // check for existance of target directory
-                if (! file_exists($targetDir)) {
+                if (! $fs->exists($targetDir)) {
                     $this->logger->error("The target directory could not be found: $targetDir");
-                    $this->logger->error("'$item->name' was NOT moved and is still in the working directory.");
-
-                    exit(1);
                 } else {
-                    exec("mv {$workingDir}{$item->name} {$targetDir} 2>&1", $output, $exitCode);
+                    try {
+                        $fs->rename($workingDir . $item->name, $targetDir . $item->name);   
+
+                        $item->is_moved = true;
+                        $item->save();
+                    } catch (IOException $e) {
+                        $this->logger->error($e->getMessage());
+                    }
                 }
 
-                // deal with exit code failures
-                if ($exitCode != 0) {
-                    $this->logger->error(implode(' ', $output));
-
-                    exit(1);
+                if ($item->is_moved !== true) {
+                    $this->logger->error("'$item->name' was NOT moved and is still in the working directory.");
                 }
-
-                // mark as moved in local DB queue
-                $item->is_moved = true;
-                $item->save();
             });
 
             // set class variable with moved items
@@ -706,22 +704,23 @@ class Locomotive
                 // of sanity check to prevent bad things
                 if ($fs->exists($sourceStream)) {
                     try {
-                        @$result = $fs->remove($sourceStream);
+                        @$fs->remove($sourceStream);
 
                         $item->source_cleaned = true;
                         $item->save();
 
                         $this->logger->info("The following item was removed from source: $sourceItemPath");
                     } catch (Exception $e) {
-                        $this->logger->warning("There was a problem deleting: $sourceItemPath");
                         $this->logger->warning($e->getMessage());
                     } catch (IOException $e) {
-                        $this->logger->warning("There was a problem deleting: $sourceItemPath");
                         $this->logger->warning($e->getMessage());
                     } catch (IOExceptionInterface $e) {
-                        $this->logger->warning("There was a problem deleting: $sourceItemPath");
                         $this->logger->warning($e->getMessage());
                     }
+                }
+
+                if ($item->source_cleaned !== true) {
+                    $this->logger->warning("There was a problem removing an item: $sourceItemPath");
                 }
             });
         }

@@ -183,19 +183,13 @@ class Locomote extends Command
         }
 
         // set lftp global limits
-        $locomotive->setLimits();
-
-        // begin new transfers via lftp
-        $locomotive->initiateTransfers();
-
-        // update local DB queue active/finished flags
-        $locomotive->updateLocalQueue();
-
-        // move finished local transfered items to their final target detination
-        $locomotive->moveFinished();
-
-        // source-side file cleanup (if enabled via options)
-        $locomotive->removeSourceFiles();
+        $locomotive
+            ->setLimits()
+            ->initiateTransfers()
+            ->updateLocalQueue()
+            ->moveFinished()
+            ->removeSourceFiles()
+        ;
         
         // write main status to output: new transfers
         if ($locomotive->newTransfers) {

@@ -715,10 +715,15 @@ class Locomotive
             // constrain search to source directory
             $hostItems->in("ssh2.sftp://$this->sshSession" . $source);
 
-            // TODO: reject items that do not pass an optional cutoff date
-
             // collect the source items
             $collectedHostItems = Collection::make(iterator_to_array($hostItems, false));
+
+            // reject items that do not pass an optional cutoff date
+            if (! is_null($this->options['newer-than'])) {
+                $collectedHostItems = $collectedHostItems->reject(function($item) {
+                    return $item->getMTime() < strtotime($this->options['newer-than']);
+                });
+            }
 
             // place source items into main items collection
             $items->put($source, $collectedHostItems);
@@ -749,15 +754,10 @@ class Locomotive
 
         $items->transform(function(&$sourceItems, $sourceDir) use ($seen) {
             return $sourceItems->reject(function($item) use ($seen) {
-                if (
-                    // TODO: filter out items that don't meet a date criteria
-                    $item->getMTime() > strtotime($this->options['newer-than'])
-                ) {
-                    // filter out items seen in the local queue
-                    return $seen->contains(
-                        $this->makeHash($item->getBasename(), $item->getMTime())
-                    );
-                }
+                // filter out items seen in the local queue
+                return $seen->contains(
+                    $this->makeHash($item->getBasename(), $item->getMTime())
+                );
             });
         });
 

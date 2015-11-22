@@ -68,4 +68,10 @@ class LocalQueue extends Model
 	{
 		return $query->where('run_id', '!=', $runId);
 	}
+
+	public function scopeCanBeRetried($query, $limit)
+	{
+		return $query->failed()
+					 ->where('retries', '<', $limit);
+	}
 }

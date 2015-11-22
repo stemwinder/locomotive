@@ -185,8 +185,8 @@ class Locomote extends Command
         // set lftp global limits
         $locomotive
             ->setLimits()
-            ->initiateTransfers()
             ->updateLocalQueue()
+            ->initiateTransfers()
             ->moveFinished()
             ->removeSourceFiles()
         ;
@@ -205,7 +205,7 @@ class Locomote extends Command
         }
 
         // write main status to output: moved items
-        if ($locomotive->movedItems) {
+        if ($locomotive->movedItems->count() > 0) {
             $output->writeln('Finished items were moved:');
             $messageLines = array();
             $locomotive->movedItems->each(function($item) use (&$messageLines) {

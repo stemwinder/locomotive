@@ -176,8 +176,8 @@ class Locomotive
         $metrics->save();
 
         $this->runId = uniqid();
-
         $this->mappedQueue = new Collection;
+        $this->movedItems = new Collection;
 
         // setting working directory
         if (null == $this->options['working-dir']) {
@@ -325,7 +325,7 @@ class Locomotive
      *
      * @return Locomotive
      **/
-    public function parseLftpQueue(Array $queueOutput)
+    public function parseLftpQueue(array $queueOutput)
     {
         $this->logger->debug('An active lftp queue was found. Begin parsing.');
 
@@ -458,6 +458,7 @@ class Locomotive
                         && $item->file_count == $itemSize['fileCount']
                     ) {
                         $item->is_finished = true;
+                        $item->is_failed = false;
                         $item->save();
                     } else {
                         // mark item as failed if there is a size or count mismatch
@@ -469,10 +470,6 @@ class Locomotive
                     $item->is_failed = true;
                     $item->save();
                 }
-
-                // TODO: handle all local queue items marked as inactive and unfinished
-                // by re-enqueueing up to a maximum [n] times. Will need to modify
-                // `$this->filterSourceItems()`.
             });
         }
         
@@ -498,18 +495,26 @@ class Locomotive
         $target = $this->mapTargetFromSource($transferPath);
 
         // write the item to the local DB queue
-        $localQueue = LocalQueue::create([
+        $localQueue = LocalQueue::firstOrNew([
             'hash' => $hash,
-            'run_id' => $this->runId,
-            'name' => $item->getBasename(),
-            'host' => $this->arguments['host'],
-            'source_dir' => $transferPath,
-            'size_bytes' => $itemSize['itemSize'],
-            'file_count' => $itemSize['fileCount'],
-            'last_modified' => date('Y-m-d H:i:s', $item->getMTime()),
-            'started_at' => date('Y-m-d H:i:s'),
-            'target_dir' => $target,
         ]);
+
+        $localQueue->run_id = $this->runId;
+        $localQueue->name = $item->getBasename();
+        $localQueue->host = $this->arguments['host'];
+        $localQueue->source_dir = $transferPath;
+        $localQueue->size_bytes = $itemSize['itemSize'];
+        $localQueue->file_count = $itemSize['fileCount'];
+        $localQueue->last_modified = date('Y-m-d H:i:s', $item->getMTime());
+        $localQueue->started_at = date('Y-m-d H:i:s');
+        $localQueue->target_dir = $target;
+
+        if ($localQueue->is_failed == true) {
+            $localQueue->is_failed = false;
+            $localQueue->retries++;
+        }
+
+        $localQueue->save();
 
         return $localQueue;
     }
@@ -662,11 +667,10 @@ class Locomotive
 
                 if ($item->is_moved !== true) {
                     $this->logger->error("'$item->name' was NOT moved and is still in the working directory.");
+                } else {
+                    $this->movedItems->push($item);
                 }
             });
-
-            // set class variable with moved items
-            $this->movedItems = $finished;
         } else {
             $this->logger->debug('No finished items were returned from the local DB queue.');
         }
@@ -800,6 +804,16 @@ class Locomotive
 
         // retreive all items from the local queue
         $seen = LocalQueue::lists('hash');
+
+        // retreive items that can be retried (and aren't currently active)
+        $retry = LocalQueue::canBeRetried($this->options['max-retries'])
+                           ->lftpActive($this->mappedQueue->keys())
+                           ->lists('hash');
+
+        // removing retry-able items
+        if ($retry->count() > 0) {
+            $seen = $seen->diff($retry);
+        }
 
         $items->transform(function(&$sourceItems, $sourceDir) use ($seen) {
             return $sourceItems->reject(function($item) use ($seen) {

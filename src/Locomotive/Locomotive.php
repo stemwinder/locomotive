@@ -151,7 +151,9 @@ class Locomotive
         $this->dependencyCheck()
              ->setPaths()
              ->validatePaths()
-             ->bootstrap($input, $logger);
+             ->bootstrap($input, $logger)
+             ->parseSpeedSchedule()
+        ;
     }
 
     /**
@@ -264,6 +266,29 @@ class Locomotive
         return $this;
     }
 
+    /**
+     * Overides the speed limit based on scheduled values in the config file.
+     *
+     * @return Locomotive
+     **/
+    private function parseSpeedSchedule()
+    {
+        if (count($this->options['speed-schedule']) > 0) {
+            foreach ($this->options['speed-schedule'] as $schedule => $limit) {
+                $schedule = explode('-', $schedule);
+                $begin = Carbon::parse($schedule[0]);
+                $end = Carbon::parse($schedule[1]);
+
+                if (Carbon::now()->between($begin, $end)) {
+                    $this->options['speed-limit'] = $limit;
+
+                    $this->logger->info("The speed limit is being set from a schedule: $limit Bps.");
+                }
+            }
+        }
+
+        return $this;
+    }
 
     /**
      * Gets a source path's mapped target path, or return the target path if no
@@ -464,14 +489,14 @@ class Locomotive
                         // mark item as failed if there is a size or count mismatch
                         $item->is_failed = true;
                         $item->save();
-                        
+
                         $this->logger->warning("The following transfer failed: $item->name");
                     }
                 } else {
                     // mark item as failed if it can't be found locally
                     $item->is_failed = true;
                     $item->save();
-                    
+
                     $this->logger->warning("The following transfer failed: $item->name");
                 }
             });

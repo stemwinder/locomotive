@@ -73,12 +73,16 @@ class LocomoteConfiguration implements ConfigurationInterface
                         ->end()
                         ->arrayNode('exclude')
                             ->performNoDeepMerging()
-                            ->prototype('scalar')
-                            ->end()
+                            ->prototype('scalar')->end()
                         ->end()
                     ->end()
                 ->end()
-                ->scalarNode('prowl-api')->end()
+                ->arrayNode('speed-schedule')
+                    ->useAttributeAsKey(true)
+                    ->normalizeKeys(false)
+                    ->performNoDeepMerging()
+                    ->prototype('scalar')->end()
+                ->end()
             ->end();
 
         return $treeBuilder;

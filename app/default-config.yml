@@ -12,4 +12,4 @@ newer-than:
 remove-sources:
   remove: false
   exclude:
-prowl-api:
+speed-schedule:

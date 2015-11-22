@@ -8,3 +8,4 @@ app/storage/logs/*
 !app/storage/logs/.gitkeep
 config.yml
 .DS_Store
+.AppleDouble

@@ -247,12 +247,12 @@ class Locomotive
             if (count($this->arguments['source']) != count($this->arguments['target'])) {
                 $this->logger->error('When both the SOURCE and TARGET are path lists, they are assumed to be mapped and their number of paths must match.');
 
-                return 0;
+                exit(1);
             }
         } elseif (is_array($this->arguments['target']) && ! is_array($this->arguments['source'])) {
             $this->logger->error('The provided TARGET is a list of paths, but the SOURCE is not. I don\'t know what to do.');
 
-            return 0;
+            exit(1);
         }
 
         return $this;
@@ -641,7 +641,7 @@ class Locomotive
             $finished->each(function($item, $key) use ($workingDir) {
                 // move item
                 $targetDir = rtrim($item->target_dir, '/') . '/';
-                
+
                 // check for existance of target directory
                 if (! file_exists($targetDir)) {
                     $this->logger->error("The target directory could not be found: $targetDir");

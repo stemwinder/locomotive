@@ -639,11 +639,18 @@ class Locomotive
             $workingDir = $this->options['working-dir'];
 
             $finished->each(function($item, $key) use ($workingDir) {
-                // TODO: check for existance of target directory
-
                 // move item
                 $targetDir = rtrim($item->target_dir, '/') . '/';
-                exec("mv {$workingDir}{$item->name} {$targetDir} 2>&1", $output, $exitCode);
+                
+                // check for existance of target directory
+                if (! file_exists($targetDir)) {
+                    $this->logger->error("The target directory could not be found: $targetDir");
+                    $this->logger->error("'$item->name' was NOT moved and is still in the working directory.");
+
+                    exit(1);
+                } else {
+                    exec("mv {$workingDir}{$item->name} {$targetDir} 2>&1", $output, $exitCode);
+                }
 
                 // deal with exit code failures
                 if ($exitCode != 0) {

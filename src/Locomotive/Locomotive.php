@@ -174,6 +174,8 @@ class Locomotive
 
         $this->runId = uniqid();
 
+        $this->mappedQueue = new Collection;
+
         // setting working directory
         if (null == $this->options['working-dir']) {
             $this->options['working-dir'] = BASEPATH . '/app/storage/working/';
@@ -374,23 +376,19 @@ class Locomotive
         $localQueue = LocalQueue::notFinished()->get();
 
         // map lftp queue items to local DB queue items
-        $mappedQueue = new Collection;
-        $localQueue->each(function($localItem, $key) use ($mappedQueue, $mergedLftpQueue) {
+        $localQueue->each(function($localItem, $key) use ($mergedLftpQueue) {
             $mappedItem = $mergedLftpQueue->search(function($aItem, $aKey) use ($localItem) {
                 return strstr($aItem, $localItem->name);
             });
 
             if ($mappedItem !== false) {
-                $mappedQueue->put($localItem->id, $mappedItem);
+                $this->mappedQueue->put($localItem->id, $mappedItem);
             }
         });
 
         // set class variable with count of current active items
-        $this->lftpQueueCount = $mappedQueue->count();
+        $this->lftpQueueCount = $this->mappedQueue->count();
         $this->logger->debug("Recording the lftp queue count as $this->lftpQueueCount");
-
-        // set class variable with mapped queue
-        $this->mappedQueue = $mappedQueue;
 
         // TODO: parse stats
         /*$parsedQueue = array();
@@ -417,7 +415,7 @@ class Locomotive
     {
         $this->logger->debug('Beginning local DB queue update.');
 
-        if (! isset($this->mappedQueue)) {
+        if ($this->mappedQueue->count() < 1) {
             // a backgrounded lftp queue was never detected; assume it has cleared
             // since last run and check local items
             $localQueue = LocalQueue::notForRun($this->runId)

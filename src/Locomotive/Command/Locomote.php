@@ -191,11 +191,11 @@ class Locomote extends Command
         // update local DB queue active/finished flags
         $locomotive->updateLocalQueue();
 
-        // TODO: source-side file cleanup (if enabled via options)
-        // $locomotive->removeSourceFiles();
-
         // move finished local transfered items to their final target detination
         $locomotive->moveFinished();
+
+        // source-side file cleanup (if enabled via options)
+        $locomotive->removeSourceFiles();
         
         // write main status to output: new transfers
         if ($locomotive->newTransfers) {

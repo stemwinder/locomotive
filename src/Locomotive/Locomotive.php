@@ -16,6 +16,9 @@ namespace Locomotive;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Logger\ConsoleLogger;
+use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\Filesystem\Exception\IOExceptionInterface;
+use Symfony\Component\Filesystem\Exception\IOException;
 use Symfony\Component\Finder\Finder;
 use Illuminate\Database\Capsule\Manager as Capsule;
 use Illuminate\Support\Collection;
@@ -186,6 +189,9 @@ class Locomotive
             array_merge($this->arguments, $this->options),
             $logger
         );
+
+        // setup ssh/sftp session
+        $this->createSshSession();
 
         return $this;
     }
@@ -539,9 +545,6 @@ class Locomotive
             }
         }
 
-        // setup ssh/sftp session
-        $this->createSshSession();
-
         // get listing of items from all source directories
         $this->logger->info('Retrieving all available items from host source(s).');
         $sourceItems = $this->getSourceItems();
@@ -673,6 +676,11 @@ class Locomotive
         return $this;
     }
 
+    /**
+     * Removes finished items from source.
+     *
+     * @return Locomotive
+     **/
     public function removeSourceFiles()
     {
         if ($this->options['remove-source'] !== true) {
@@ -682,12 +690,43 @@ class Locomotive
         $this->logger->debug('Beginning source file removal.');
 
         // getting finished items
-        $finished = LocalQueue::finished()->get();
-        if ($finished->count() > 0) {
-            $finished->each(function($item, $key) {
+        $finished = LocalQueue::finished()
+            ->notFailed()
+            ->where('source_cleaned', false)
+            ->get();
 
+        if ($finished->count() > 0) {
+            $fs = new Filesystem();
+
+            $finished->each(function($item, $key) use ($fs) {
+                $sourceItemPath = rtrim($item->source_dir, '/') . '/' . $item->name;
+                $sourceStream = "ssh2.sftp://$this->sshSession" . $sourceItemPath;
+
+                // check to make sure item path exists on source as a sort
+                // of sanity check to prevent bad things
+                if ($fs->exists($sourceStream)) {
+                    try {
+                        @$result = $fs->remove($sourceStream);
+
+                        $item->source_cleaned = true;
+                        $item->save();
+
+                        $this->logger->info("The following item was removed from source: $sourceItemPath");
+                    } catch (Exception $e) {
+                        $this->logger->warning("There was a problem deleting: $sourceItemPath");
+                        $this->logger->warning($e->getMessage());
+                    } catch (IOException $e) {
+                        $this->logger->warning("There was a problem deleting: $sourceItemPath");
+                        $this->logger->warning($e->getMessage());
+                    } catch (IOExceptionInterface $e) {
+                        $this->logger->warning("There was a problem deleting: $sourceItemPath");
+                        $this->logger->warning($e->getMessage());
+                    }
+                }
             });
         }
+
+        return $this;
     }
 
     /**

@@ -42,6 +42,7 @@ class InitializeDatabase extends AbstractMigration
               ->addColumn('is_finished', 'boolean', ['default' => false])
               ->addColumn('is_failed', 'boolean', ['default' => false])
               ->addColumn('is_moved', 'boolean', ['default' => false])
+              ->addColumn('source_cleaned', 'boolean', ['default' => false])
               ->addColumn('created_at', 'timestamp')
               ->addColumn('updated_at', 'timestamp')
               ->addColumn('deleted_at', 'timestamp', ['null' => true])

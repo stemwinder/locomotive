@@ -464,11 +464,15 @@ class Locomotive
                         // mark item as failed if there is a size or count mismatch
                         $item->is_failed = true;
                         $item->save();
+                        
+                        $this->logger->warning("The following transfer failed: $item->name");
                     }
                 } else {
                     // mark item as failed if it can't be found locally
                     $item->is_failed = true;
                     $item->save();
+                    
+                    $this->logger->warning("The following transfer failed: $item->name");
                 }
             });
         }

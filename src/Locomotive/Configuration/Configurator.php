@@ -40,12 +40,12 @@ class Configurator
     /**
      * @var Array
      **/
-    protected $config;
+    protected $cli;
 
     /**
      * @var Array
      **/
-    protected $cli;
+    protected $config;
 
     /**
      * Class Constructor.
@@ -146,6 +146,13 @@ class Configurator
     private function processConfigurationValues(InputInterface $input)
     {
         $configs = array($this->defaults, $this->user, $this->cli);
+
+        // protects `remove-source` from being set as `true` if null
+        foreach ($configs as $configType => &$values) {
+            if (! isset($values['remove-source']) || is_null($values['remove-source'])) {
+               $values['remove-source'] = false;
+            }
+        }
 
         $processor = new Processor();
         $configuration = new LocomoteConfiguration();

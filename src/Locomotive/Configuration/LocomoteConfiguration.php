@@ -61,7 +61,11 @@ class LocomoteConfiguration implements ConfigurationInterface
                 ->booleanNode('remove-source')
                     ->isRequired()
                     ->cannotBeEmpty()
-                    ->defaultValue(false)
+                    ->defaultFalse()
+                    ->validate()
+                        ->ifNull()
+                        ->then(function() { return false; })
+                    ->end()
                 ->end()
                 ->scalarNode('prowl-api')->end()
             ->end();

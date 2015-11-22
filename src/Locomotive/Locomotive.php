@@ -651,7 +651,7 @@ class Locomotive
                     $this->logger->error("The target directory could not be found: $targetDir");
                 } else {
                     try {
-                        $fs->rename($workingDir . $item->name, $targetDir . $item->name);   
+                        $fs->rename($workingDir . $item->name, $targetDir . $item->name);
 
                         $item->is_moved = true;
                         $item->save();

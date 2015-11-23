@@ -184,6 +184,8 @@ class Locomotive
         // setting working directory
         if (null == $this->options['working-dir']) {
             $this->options['working-dir'] = BASEPATH . '/app/storage/working/';
+        } else {
+            $this->options['working-dir'] = rtrim($this->options['working-dir'], '/') . '/';
         }
 
         // setting up lftp command builder
@@ -851,6 +853,11 @@ class Locomotive
                     $this->makeHash($item->getBasename(), $item->getMTime())
                 );
             });
+        });
+
+        // filter out sources without any items
+        $items = $items->reject(function($source) {
+            return $source->isEmpty();
         });
 
         return $items;

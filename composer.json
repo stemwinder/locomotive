@@ -13,6 +13,7 @@
         "ext-ssh2": "*",
         "ext-sqlite3": "*",
         "psr/log": "~1.0",
+        "robmorgan/phinx": "~0.4",
         "illuminate/database": "~5.1",
         "illuminate/support": "~5.1",
         "nesbot/carbon": "~1.21",
@@ -22,7 +23,6 @@
         "symfony/finder": "~2.7"
     },
     "require-dev": {
-        "robmorgan/phinx": "~0.4",
         "symfony/var-dumper": "~2.7",
         "phpunit/phpunit": "~4.8"
     },

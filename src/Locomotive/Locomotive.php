@@ -149,9 +149,9 @@ class Locomotive
         $this->arguments['host'] = $input->getArgument('host');
 
         $this->dependencyCheck()
+             ->bootstrap($input, $logger)
              ->setPaths()
              ->validatePaths()
-             ->bootstrap($input, $logger)
         ;
     }
 
@@ -227,19 +227,28 @@ class Locomotive
      **/
     private function setPaths()
     {
+        // attempt to set source/target from config file if not proivided at CLI
+        if (! array_filter([
+            $this->input->getArgument('source'),
+            $this->input->getArgument('target')
+        ])) {
+            $this->arguments['source'] = array_keys($this->options['source-target-map']);
+            $this->arguments['target'] = array_values($this->options['source-target-map']);
         // setting SOURCE to either single path or list
-        $sourceArg = $this->input->getArgument('source');
-        $this->arguments['source'] = str_contains($sourceArg, ':')
-            ? explode(':', $sourceArg)
-            : $sourceArg
-        ;
+        } else {
+            $sourceArg = $this->input->getArgument('source');
+            $this->arguments['source'] = str_contains($sourceArg, ':')
+                ? explode(':', $sourceArg)
+                : $sourceArg
+            ;
 
-        // setting TARGET to either single path or list
-        $targetArg = $this->input->getArgument('target');
-        $this->arguments['target'] = str_contains($targetArg, ':')
-            ? explode(':', $targetArg)
-            : $targetArg
-        ;
+            // setting TARGET to either single path or list
+            $targetArg = $this->input->getArgument('target');
+            $this->arguments['target'] = str_contains($targetArg, ':')
+                ? explode(':', $targetArg)
+                : $targetArg
+            ;
+        }
 
         return $this;
     }
@@ -262,6 +271,19 @@ class Locomotive
             $this->logger->error('The provided TARGET is a list of paths, but the SOURCE is not. I don\'t know what to do.');
 
             exit(1);
+        } elseif (! is_null($this->arguments['source']) && is_null($this->arguments['target'])) {
+            $this->logger->error('If the SOURCE arguement is used at the CLI, then the TARGET must be provided at the CLI as well.');
+
+            exit(1);
+        }
+
+        // validating source-target maps from config file
+        if (! array_filter([$this->arguments['source'], $this->arguments['target']])) {
+            if (! $this->options['source-target-map']) {
+                $this->logger->error('Both SOURCE and TARGET arguemnts are missing.');
+
+                exit(1);
+            }
         }
 
         return $this;

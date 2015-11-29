@@ -45,12 +45,12 @@ class Locomote extends Command
             )
             ->addArgument(
                 'source',
-                InputArgument::REQUIRED,
+                InputArgument::OPTIONAL,
                 'The full path to the SOURCE directory. May also be a colon-delimited source list.'
             )
              ->addArgument(
                 'target',
-                InputArgument::REQUIRED,
+                InputArgument::OPTIONAL,
                 'The full path to the TARGET directory. May also be a colon-delimited target list map.'
             )
         ;

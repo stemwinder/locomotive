@@ -83,6 +83,12 @@ class LocomoteConfiguration implements ConfigurationInterface
                     ->performNoDeepMerging()
                     ->prototype('scalar')->end()
                 ->end()
+                 ->arrayNode('source-target-map')
+                    ->useAttributeAsKey(true)
+                    ->normalizeKeys(false)
+                    ->performNoDeepMerging()
+                    ->prototype('scalar')->end()
+                ->end()
             ->end();
 
         return $treeBuilder;

@@ -152,7 +152,6 @@ class Locomotive
              ->setPaths()
              ->validatePaths()
              ->bootstrap($input, $logger)
-             ->parseSpeedSchedule()
         ;
     }
 
@@ -263,30 +262,6 @@ class Locomotive
             $this->logger->error('The provided TARGET is a list of paths, but the SOURCE is not. I don\'t know what to do.');
 
             exit(1);
-        }
-
-        return $this;
-    }
-
-    /**
-     * Overides the speed limit based on scheduled values in the config file.
-     *
-     * @return Locomotive
-     **/
-    private function parseSpeedSchedule()
-    {
-        if (count($this->options['speed-schedule']) > 0) {
-            foreach ($this->options['speed-schedule'] as $schedule => $limit) {
-                $schedule = explode('-', $schedule);
-                $begin = Carbon::parse($schedule[0]);
-                $end = Carbon::parse($schedule[1]);
-
-                if (Carbon::now()->between($begin, $end)) {
-                    $this->options['speed-limit'] = $limit;
-
-                    $this->logger->info("The speed limit is being set from a schedule: $limit Bps.");
-                }
-            }
         }
 
         return $this;

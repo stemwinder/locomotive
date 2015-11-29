@@ -18,6 +18,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Logger\ConsoleLogger;
 use Symfony\Component\Config\Definition\Processor;
 use Symfony\Component\Yaml\Yaml;
+use Carbon\Carbon;
 use Locomotive\Configuration\LocomoteConfiguration;
 
 class Configurator
@@ -168,7 +169,38 @@ class Configurator
             $configs
         );
 
+        $this->parseSpeedSchedule();
+
         $this->logger->debug('Configs validated, merged, and loaded successfully.');
+
+        return $this;
+    }
+
+    /**
+     * Overides the speed limit based on scheduled values in the config file.
+     *
+     * @return Configurator
+     **/
+    private function parseSpeedSchedule()
+    {
+        // defer to speed limit set on command line
+        if (isset($this->cli['speed-limit'])) {
+            return;
+        }
+
+        if (count($this->config['speed-schedule']) > 0) {
+            foreach ($this->config['speed-schedule'] as $schedule => $limit) {
+                $schedule = explode('-', $schedule);
+                $begin = Carbon::parse($schedule[0]);
+                $end = Carbon::parse($schedule[1]);
+
+                if (Carbon::now()->between($begin, $end)) {
+                    $this->config['speed-limit'] = $limit;
+
+                    $this->logger->info("The speed limit is being set from a schedule: $limit Bps.");
+                }
+            }
+        }
 
         return $this;
     }

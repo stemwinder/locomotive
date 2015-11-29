@@ -182,7 +182,7 @@ class Locomote extends Command
             $locomotive->parseLftpQueue($lftpQueue);
         }
 
-        // set lftp global limits
+        // run Locomotive queue updates, transfers, and file handling
         $locomotive
             ->setLimits()
             ->updateLocalQueue()

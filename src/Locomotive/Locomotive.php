@@ -797,15 +797,29 @@ class Locomotive
             $hostItems = $finder->depth('== 0');
 
             // constrain search to source directory
-            $hostItems->in("ssh2.sftp://$this->sshSession" . $source);
+            $hostItems->in("ssh2.sftp://$this->sshSession" . $source)
+                      ->ignoreDotFiles(true);
 
             // collect the source items
             $collectedHostItems = Collection::make(iterator_to_array($hostItems, false));
 
+            // reject items that are still being unpacked
+            $collectedHostItems = $collectedHostItems->reject(function($item) {
+                if (starts_with($item->getBasename(), ['_UNPACK_', '_FAILED_'])) {
+                    $this->logger->debug("An item was pattern-rejected: {$item->getBasename()}");
+
+                    return true;
+                }
+            });
+
             // reject items that do not pass an optional cutoff date
             if (! is_null($this->options['newer-than'])) {
                 $collectedHostItems = $collectedHostItems->reject(function($item) {
-                    return $item->getMTime() < strtotime($this->options['newer-than']);
+                    if ($item->getMTime() < strtotime($this->options['newer-than'])) {
+                        $this->logger->debug("An item was date-cutoff rejected: {$item->getBasename()}");
+
+                        return true;
+                    }
                 });
             }
 

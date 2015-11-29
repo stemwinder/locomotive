@@ -305,7 +305,7 @@ class Locomotive
         if (is_array($this->arguments['target']) && is_array($this->arguments['source'])) {
             // get the key for the matching array source
             $matchingSource = array_filter($this->arguments['source'], function($source, $key) use ($sourceDir) {
-                return strstr($source, rtrim($sourceDir, '/'));
+                return str_contains($source, rtrim($sourceDir, '/'));
             }, ARRAY_FILTER_USE_BOTH);
 
             // return the target path at the key matching the source, effectively
@@ -326,8 +326,8 @@ class Locomotive
         $this->logger->debug('Checking lftp status via queue attachment attempt.');
 
         $status = $this->lftp
-            ->addCommand('queue')
-            ->execute(false, true);
+                       ->addCommand('queue')
+                       ->execute(false, true);
 
         // test for backgrounded process
         if (strpos(end($status), 'backgrounded') !== false) {
@@ -367,12 +367,12 @@ class Locomotive
 
         // seek to beginning of active items
         $activeKey = $lftpQueue->search(function($item) {
-            return strstr($item, 'Now executing:');
+            return str_contains($item, 'Now executing:');
         });
 
         // seek to beginning of queued items
         $queuedKey = $lftpQueue->search(function($item) {
-            return strstr($item, 'Commands queued:');
+            return str_contains($item, 'Commands queued:');
         });
 
         // seperate items into new collections
@@ -411,7 +411,7 @@ class Locomotive
         // map lftp queue items to local DB queue items
         $localQueue->each(function($localItem, $key) use ($mergedLftpQueue) {
             $mappedItem = $mergedLftpQueue->search(function($aItem, $aKey) use ($localItem) {
-                return strstr($aItem, $localItem->name);
+                return str_contains($aItem, $localItem->name);
             });
 
             if ($mappedItem !== false) {
@@ -452,17 +452,17 @@ class Locomotive
             // a backgrounded lftp queue was never detected; assume it has cleared
             // since last run and check local items
             $localQueue = LocalQueue::notForRun($this->runId)
-                ->notFinished()
-                ->notFailed()
-                ->get();
+                                    ->notFinished()
+                                    ->notFailed()
+                                    ->get();
         } else {
             // get all unfinished items from local DB queue that don't exist
             // in mapped queue (aren't currently active in lftp)
             $localQueue = LocalQueue::notForRun($this->runId)
-                ->notFinished()
-                ->notFailed()
-                ->lftpActive($this->mappedQueue->keys())
-                ->get();
+                                    ->notFinished()
+                                    ->notFailed()
+                                    ->lftpActive($this->mappedQueue->keys())
+                                    ->get();
         }
 
         // mark items finished if file size matches
@@ -724,9 +724,9 @@ class Locomotive
 
         // getting finished items
         $finished = LocalQueue::finished()
-            ->notFailed()
-            ->where('source_cleaned', false)
-            ->get();
+                              ->notFailed()
+                              ->where('source_cleaned', false)
+                              ->get();
 
         if ($finished->count() > 0) {
             $fs = new Filesystem();
@@ -735,7 +735,7 @@ class Locomotive
             if (count($this->options['remove-sources']['exclude']) > 0) {
                 $finished = $finished->reject(function($item) {
                     foreach ($this->options['remove-sources']['exclude'] as $exclusion) {
-                        if (strstr(trim($exclusion, '/'), trim($item->source_dir, '/'))) {
+                        if (str_contains(trim($exclusion, '/'), trim($item->source_dir, '/'))) {
                             return true;
                         }
                     }
@@ -972,7 +972,8 @@ class Locomotive
         $this->lftp
              ->setSpeedLimit($this->options['speed-limit'])
              ->setQueueTransferLimit($this->options['transfer-limit'])
-             ->execute(false, $this->isLftpBackgrounded, $this->lftpTerminalId);
+             ->execute(false, $this->isLftpBackgrounded, $this->lftpTerminalId)
+        ;
 
         return $this;
     }

@@ -875,8 +875,9 @@ class Locomotive
     }
 
     /**
-     * Builds a final transfer list by 'zipping' together items from multiple
-     * sources into an alternating list and limiting to available slots.
+     * Builds a final transfer list in FIFO ordering by default.  Also supports
+     * 'zipping' together items from multiple sources into an alternating list
+     * and limiting to available slots.
      *
      * @param Collection $items A full list of sources/items
      * @param int $slots Available transfer slots
@@ -885,23 +886,30 @@ class Locomotive
      **/
     private function buildTransferList($items, $slots)
     {
-        $zippedItems = new Collection;
+        $orderedItems = new Collection;
 
         // simple reduction to prevent null listings
         $items->map(function($sourceListing) use ($slots) {
             return $sourceListing->take($slots);
         });
 
-        // TODO: add support for source-order priority
-
-        // zip all sources together in alternating fashion
-        for ($i=0; $i <= $slots; $i++) { 
-            $items->each(function($sourceListing, $sourceDir) use ($zippedItems) {
-                $zippedItems->push($sourceListing->shift());
+        if ($this->options['zip-sources'] === true) {
+            // zip all sources together in alternating fashion
+            for ($i=0; $i <= $slots; $i++) { 
+                $items->each(function($sourceListing, $sourceDir) use ($orderedItems) {
+                    $orderedItems->push($sourceListing->shift());
+                });
+            }
+        } else {
+            // build `$orderedItems` list in FIFO order
+            $items->each(function($sourceListing, $sourceDir) use ($orderedItems) {
+                $sourceListing->each(function($source) use ($orderedItems) {
+                    $orderedItems->push($source);
+                });
             });
         }
 
-        $cleanedItems = $zippedItems->take($slots)->filter();
+        $cleanedItems = $orderedItems->take($slots)->filter();
 
         return $cleanedItems;
     }

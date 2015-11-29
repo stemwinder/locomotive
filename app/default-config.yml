@@ -9,6 +9,7 @@ connection-limit: 25
 transfer-limit: 3
 max-retries: 5
 newer-than:
+zip-sources: false
 remove-sources:
   remove: false
   exclude:

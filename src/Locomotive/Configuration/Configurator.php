@@ -104,7 +104,7 @@ class Configurator
         $userConfigFile = BASEPATH . '/config.yml';
 
         if (file_exists($userHomeConfigFile)) {
-            $this->user = Yaml::parse($userHomeConfigFile);
+            $this->user = Yaml::parse(file_get_contents($userHomeConfigFile));
             $this->logger->debug('User YAML config loaded from: ' . $userHomeConfigFile);
         } elseif (file_exists($userConfigFile)) {
             $this->user = Yaml::parse(file_get_contents($userConfigFile));

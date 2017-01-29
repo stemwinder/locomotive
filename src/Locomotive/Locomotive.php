@@ -845,12 +845,12 @@ class Locomotive
         }
 
         // retreive all items from the local queue
-        $seen = LocalQueue::lists('hash');
+        $seen = LocalQueue::pluck('hash');
 
         // retreive items that can be retried (and aren't currently active)
         $retry = LocalQueue::canBeRetried($this->options['max-retries'])
                            ->lftpActive($this->mappedQueue->keys())
-                           ->lists('hash');
+                           ->pluck('hash');
 
         // removing retry-able items
         if ($retry->count() > 0) {

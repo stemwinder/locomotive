@@ -20,6 +20,7 @@ use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Filesystem\Exception\IOExceptionInterface;
 use Symfony\Component\Filesystem\Exception\IOException;
 use Symfony\Component\Finder\Finder;
+use Symfony\Component\Finder\SplFileInfo;
 use Illuminate\Database\Capsule\Manager as Capsule;
 use Illuminate\Support\Collection;
 use Carbon\Carbon;
@@ -118,23 +119,24 @@ class Locomotive
     public $movedItems;
 
     /**
-     * @var Array
+     * @var array
      **/
     protected $arguments = array();
 
     /**
-     * @var Array
+     * @var array
      **/
     protected $options = array();
 
     /**
      * Class Constructor.
      *
-     * @param InputInterface  $input  An Input instance
-     * @param OutputInterface $output An Output instance
-     * @param ConsoleLogger   $logger Console Logger
+     * @param InputInterface                        $input  An Input instance
+     * @param OutputInterface                       $output An Output instance
+     * @param ConsoleLogger                         $logger Console Logger
+     * @param \Illuminate\Database\Capsule\Manager  $DB
      */
-    function __construct(
+    public function __construct(
         InputInterface $input,
         OutputInterface $output,
         ConsoleLogger $logger,
@@ -560,7 +562,7 @@ class Locomotive
      **/
     public function initiateTransfers($availableSlots = null)
     {
-        if (is_null($availableSlots)) {
+        if (null === $availableSlots) {
             $lftpQueueCount = $this->lftpQueueCount ?: 0;
             
             // assume lftp queue is innactive
@@ -643,12 +645,12 @@ class Locomotive
             // execute transfer
             $this->lftp->execute(true, $this->isLftpBackgrounded, $this->lftpTerminalId);
             
-            // write transfered items to global variable for output
+            // write transferred items to global variable for output
             $this->newTransfers = $transferList;
         } else {
             $this->logger->info('There are no new items available for transfer.');
 
-            // no transfers occured for program output
+            // no transfers occurred for program output
             $this->newTransfers = false;
         }
 
@@ -679,7 +681,7 @@ class Locomotive
                 // move item
                 $targetDir = rtrim($item->target_dir, '/') . '/';
 
-                // check for existance of target directory
+                // check for existence of target directory
                 if (! $fs->exists($targetDir)) {
                     $this->logger->error("The target directory could not be found: $targetDir");
                 } else {
@@ -810,7 +812,7 @@ class Locomotive
             });
 
             // reject items that do not pass an optional cutoff date
-            if (! is_null($this->options['newer-than'])) {
+            if (null !== $this->options['newer-than']) {
                 $collectedHostItems = $collectedHostItems->reject(function($item) {
                     if ($item->getMTime() < strtotime($this->options['newer-than'])) {
                         $this->logger->debug("An item was date-cutoff rejected: {$item->getBasename()}");
@@ -840,17 +842,21 @@ class Locomotive
     {
         // first, check if local queue has ANY items at all
         $count = LocalQueue::count();
-        if ($count == 0) {
+        if ($count === 0) {
             return $items;
         }
 
-        // retreive all items from the local queue
+        // retrieve all items from the local queue
         $seen = LocalQueue::pluck('hash');
 
-        // retreive items that can be retried (and aren't currently active)
+        // retrieve items that can be retried (and aren't currently active)
         $retry = LocalQueue::canBeRetried($this->options['max-retries'])
                            ->lftpActive($this->mappedQueue->keys())
                            ->pluck('hash');
+
+        // ensures that these are Collections even if only one item is returned from `LocalQueue::pluck()`
+        $seen = is_object($seen) ?: Collection::make($seen);
+        $retry = is_object($retry) ?: Collection::make($retry);
 
         // removing retry-able items
         if ($retry->count() > 0) {
@@ -917,11 +923,11 @@ class Locomotive
     /**
      * Calculates the size and file count of an item.
      *
-     * @param Finder $item
+     * @param SplFileInfo $item
      *
      * @return array Item size and file count
      **/
-    private function calculateItemSize(\Symfony\Component\Finder\SplFileInfo $item)
+    private function calculateItemSize(SplFileInfo $item)
     {
         // file or dir specific data
         if ($item->isDir()) {
@@ -954,7 +960,7 @@ class Locomotive
      * Creates an MD5 hash for an item to assist with unique identification.
      *
      * @param string $name The item name
-     * @param int $modeTime Last modified time in unix timestamp format
+     * @param int $modTime Last modified time in unix timestamp format
      * 
      * @return string MD5 Hash
      **/
@@ -1029,7 +1035,7 @@ class Locomotive
     /**
      * Gets the parsed arguments.
      *
-     * @return Array
+     * @return array
      */
     public function getArguments()
     {

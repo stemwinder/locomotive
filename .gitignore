@@ -9,3 +9,4 @@ app/storage/logs/*
 config.yml
 .DS_Store
 .AppleDouble
+.idea/

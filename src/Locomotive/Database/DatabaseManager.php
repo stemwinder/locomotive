@@ -29,7 +29,7 @@ class DatabaseManager
     public $database;
 
     /**
-     * @var Illuminate\Database\Capsule\Manager
+     * @var \Illuminate\Database\Capsule\Manager
      **/
     public $capsule;
 
@@ -251,7 +251,7 @@ class DatabaseManager
     /**
      * Gets the database connections.
      *
-     * @return Illuminate\Database\Capsule\Manager
+     * @return \Illuminate\Database\Capsule\Manager
      **/
     public function getConnection()
     {

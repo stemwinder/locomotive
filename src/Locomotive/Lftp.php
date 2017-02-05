@@ -18,7 +18,7 @@ use Symfony\Component\Console\Logger\ConsoleLogger;
 class Lftp
 {
     /**
-     * @var Array
+     * @var array
      **/
     protected $options = array();
 
@@ -184,7 +184,6 @@ class Lftp
         }
 
         foreach ($this->commands as $cmd) {
-            // TODO: escape command ???
             $this->command .= "$cmd; ";
         }
         $this->command = rtrim($this->command);

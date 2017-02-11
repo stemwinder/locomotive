@@ -13,21 +13,20 @@
 
 namespace Locomotive;
 
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Logger\ConsoleLogger;
-use Symfony\Component\Filesystem\Filesystem;
-use Symfony\Component\Filesystem\Exception\IOExceptionInterface;
-use Symfony\Component\Filesystem\Exception\IOException;
-use Symfony\Component\Finder\Finder;
-use Symfony\Component\Finder\SplFileInfo;
+use Carbon\Carbon;
 use Illuminate\Database\Capsule\Manager as Capsule;
 use Illuminate\Support\Collection;
-use Carbon\Carbon;
 use Locomotive\Configuration\Configurator;
-use Locomotive\Lftp;
 use Locomotive\Database\Models\LocalQueue;
 use Locomotive\Database\Models\Metrics;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Logger\ConsoleLogger;
+use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Filesystem\Exception\IOException;
+use Symfony\Component\Filesystem\Exception\IOExceptionInterface;
+use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\Finder\Finder;
+use Symfony\Component\Finder\SplFileInfo;
 
 class Locomotive
 {
@@ -855,8 +854,8 @@ class Locomotive
                            ->pluck('hash');
 
         // ensures that these are Collections even if only one item is returned from `LocalQueue::pluck()`
-        $seen = is_object($seen) ?: Collection::make($seen);
-        $retry = is_object($retry) ?: Collection::make($retry);
+        $seen = ($seen instanceof Collection) ? $seen : Collection::make($seen);
+        $retry = ($retry instanceof Collection) ? $retry : Collection::make($retry);
 
         // removing retry-able items
         if ($retry->count() > 0) {

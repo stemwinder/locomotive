@@ -5,11 +5,12 @@ using segmented and parallel transfers.
 Requirements
 ------------
 
-* Linux or OS X
-* PHP >= 5.6.14
-* [SSH2 Extension](http://www.php.net/manual/en/book.ssh2.php)
+* Linux or MacOS
+* PHP >= v5.6.14
+* [SSH2 Extension](http://www.php.net/manual/en/book.ssh2.php) >= v0.13
+  * With [libssh2](https://www.libssh2.org) >= v1.4.3
 * [SQLite3 Extension](http://php.net/manual/en/book.sqlite3.php)
-* [LFTP](http://lftp.yar.ru) (tested with version 4.4.13)
+* [LFTP](http://lftp.yar.ru) (tested with version v4.4.13)
 
 Installation
 ------------

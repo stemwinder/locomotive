@@ -742,7 +742,7 @@ class Locomotive
 
             $finished->each(function($item, $key) use ($fs) {
                 $sourceItemPath = rtrim($item->source_dir, '/') . '/' . $item->name;
-                $sourceStream = "ssh2.sftp://$this->sshSession" . $sourceItemPath;
+                $sourceStream = 'ssh2.sftp://' . (int)$this->sshSession . $sourceItemPath;
 
                 // check to make sure item path exists on source as a sort
                 // of sanity check to prevent bad things
@@ -790,12 +790,13 @@ class Locomotive
 
         // retrieve all items from sources and build collections
         foreach ($sources as $source) {
-            // instatiate a new Finder instance
+            // instantiate a new Finder instance
             $finder = new Finder();
             $hostItems = $finder->depth('== 0');
 
             // constrain search to source directory
-            $hostItems->in("ssh2.sftp://$this->sshSession" . $source)
+            // TODO: catch exception
+            $hostItems->in('ssh2.sftp://' . (int)$this->sshSession . $source)
                       ->ignoreDotFiles(true);
 
             // collect the source items

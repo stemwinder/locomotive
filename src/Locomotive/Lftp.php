@@ -95,7 +95,7 @@ class Lftp
 
         $this->addCommand($cmd);
 
-        $this->logger->notice("Speed limit set to $limit Bps.");
+        $this->logger->debug("Speed limit set to $limit Bps.");
 
         return $this;
     }
@@ -106,7 +106,7 @@ class Lftp
 
         $this->addCommand($cmd);
 
-        $this->logger->notice("Parallel transfer limit set to $limit item(s).");
+        $this->logger->debug("Parallel transfer limit set to $limit item(s).");
 
         return $this;
     }

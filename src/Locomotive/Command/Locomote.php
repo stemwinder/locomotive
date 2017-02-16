@@ -132,8 +132,20 @@ class Locomote extends Command
      **/
     protected function initialize(InputInterface $input, OutputInterface $output)
     {
+        if ($input->hasParameterOption('-vvv')) {
+            $consoleLogLevel = Logger::DEBUG;
+        } else if ($input->hasParameterOption('-vv')) {
+            $consoleLogLevel = Logger::INFO;
+        } else if ($input->hasParameterOption('-v')) {
+            $consoleLogLevel = Logger::NOTICE;
+        } else if ($input->hasParameterOption('-q')) {
+            $consoleLogLevel = Logger::EMERGENCY;
+        } else {
+            $consoleLogLevel = Logger::ERROR;
+        }
+
         $stdoutLogFormat = "%message%\n";
-        $stdoutHandler = new StreamHandler('php://stdout');
+        $stdoutHandler = new StreamHandler('php://stdout', $consoleLogLevel);
         $stdoutHandler->setFormatter(new ColoredLineFormatter(null, $stdoutLogFormat));
 
         $rotatingFileFormat = "[%datetime%] %channel%.%level_name%: %message%\n";
@@ -155,9 +167,6 @@ class Locomote extends Command
      **/
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        // Console output
-        $outputFormatter = $this->getHelper('formatter');
-
         // creating a unique lock id to enable running Locomotive as multiple,
         // concurrent instances.
         $lockid = md5(
@@ -208,7 +217,7 @@ class Locomote extends Command
                 $thisLogger->info('New transfer started: ' . $item->getBasename());
             });
         } else {
-            $this->logger->notice('Locomotive did not start any new transfers.');
+            $this->logger->info('Locomotive did not start any new transfers.');
         }
 
         // write main status to output: moved items
@@ -218,7 +227,7 @@ class Locomote extends Command
                 $thisLogger->info('Finished item moved: ' . $item->name);
             });
         } else {
-            $this->logger->notice('Locomotive did not move any transfered items.');
+            $this->logger->info('Locomotive did not move any transfered items.');
         }
 
         // manually releasing lock

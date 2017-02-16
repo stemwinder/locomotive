@@ -576,7 +576,7 @@ class Locomotive
 
                 return $this;
             } else {
-                $this->logger->notice("Setting available transfer slots to $availableSlots.");
+                $this->logger->debug("Setting available transfer slots to $availableSlots.");
             }
         }
 

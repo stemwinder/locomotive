@@ -382,9 +382,9 @@ class Locomotive
             $queuedItems = null;
         }
 
-        // setting items to empty Collections if they return as empty
-        $activeItems = empty($activeItems) ? new Collection : $activeItems;
-        $queuedItems = empty($queuedItems) ? new Collection : $queuedItems;
+        // setting items to empty Collections if needed
+        $activeItems = ($activeItems instanceof Collection) ? $activeItems : new Collection;
+        $queuedItems = ($queuedItems instanceof Collection) ? $queuedItems : new Collection;
 
         // clean active items
         $activeItems->transform(function($item, $key) {

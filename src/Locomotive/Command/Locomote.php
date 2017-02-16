@@ -15,6 +15,8 @@
 namespace Locomotive\Command;
 
 use Bramus\Monolog\Formatter\ColoredLineFormatter;
+use Monolog\Formatter\LineFormatter;
+use Monolog\Handler\RotatingFileHandler;
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
 use Symfony\Component\Console\Command\Command;
@@ -134,8 +136,13 @@ class Locomote extends Command
         $stdoutHandler = new StreamHandler('php://stdout');
         $stdoutHandler->setFormatter(new ColoredLineFormatter(null, $stdoutLogFormat));
 
+        $rotatingFileFormat = "[%datetime%] %channel%.%level_name%: %message%\n";
+        $rotatingFileHandler = new RotatingFileHandler(BASEPATH . '/app/storage/logs/locomotive.log', 0, Logger::DEBUG);
+        $rotatingFileHandler->setFormatter(new LineFormatter($rotatingFileFormat));
+
         $this->logger = new Logger('loco');
         $this->logger->pushHandler($stdoutHandler);
+        $this->logger->pushHandler($rotatingFileHandler);
     }
 
     /**

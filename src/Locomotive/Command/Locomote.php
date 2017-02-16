@@ -14,7 +14,6 @@
 
 namespace Locomotive\Command;
 
-use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;

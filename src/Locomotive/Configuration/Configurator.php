@@ -108,7 +108,7 @@ class Configurator
             $this->logger->debug('User YAML config loaded from: ' . $userHomeConfigFile);
         } elseif (file_exists($userConfigFile)) {
             $this->user = Yaml::parse(file_get_contents($userConfigFile));
-            $this->logger->debug('User YAML config loaded.');
+            $this->logger->debug('User YAML config loaded from: ' . $userConfigFile);
         } else {
             $this->logger->warning('No user config file was found.');
             $this->user = array();

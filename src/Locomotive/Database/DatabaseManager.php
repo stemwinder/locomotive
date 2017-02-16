@@ -14,8 +14,8 @@
 
 namespace Locomotive\Database;
 
+use Monolog\Logger;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Logger\ConsoleLogger;
 use Illuminate\Database\Capsule\Manager as Capsule;
 use Phinx\Console\PhinxApplication;
 use Phinx\Wrapper\TextWrapper;
@@ -41,7 +41,7 @@ class DatabaseManager
     protected $phinx;
 
     /**
-     * @var ConsoleLogger
+     * @var Logger
      **/
     protected $logger;
 
@@ -56,9 +56,9 @@ class DatabaseManager
      * Manages all maintenance, migrations, and connection duties for the database.
      *
      * @param OutputInterface $output An Output instance
-     * @param ConsoleLogger   $logger Console Logger
+     * @param Logger          $logger Console Logger
      */
-    public function __construct(OutputInterface $output, ConsoleLogger $logger)
+    public function __construct(OutputInterface $output, Logger $logger)
     {
         $this->output = $output;
         $this->logger = $logger;

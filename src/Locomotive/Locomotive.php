@@ -19,8 +19,8 @@ use Illuminate\Support\Collection;
 use Locomotive\Configuration\Configurator;
 use Locomotive\Database\Models\LocalQueue;
 use Locomotive\Database\Models\Metrics;
+use Monolog\Logger;
 use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Logger\ConsoleLogger;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Filesystem\Exception\IOException;
 use Symfony\Component\Filesystem\Exception\IOExceptionInterface;
@@ -31,7 +31,7 @@ use Symfony\Component\Finder\SplFileInfo;
 class Locomotive
 {
     /**
-     * @var ConsoleLogger
+     * @var Logger
      **/
     protected $logger;
 
@@ -132,13 +132,13 @@ class Locomotive
      *
      * @param InputInterface                        $input  An Input instance
      * @param OutputInterface                       $output An Output instance
-     * @param ConsoleLogger                         $logger Console Logger
+     * @param Logger                                $logger Monolog Logger
      * @param \Illuminate\Database\Capsule\Manager  $DB
      */
     public function __construct(
         InputInterface $input,
         OutputInterface $output,
-        ConsoleLogger $logger,
+        Logger $logger,
         Capsule $DB
     ) {
         $this->input = $input;
@@ -160,11 +160,11 @@ class Locomotive
      * Bootstrap Locomotive.
      *
      * @param InputInterface  $input  An Input instance
-     * @param ConsoleLogger   $logger Console Logger
+     * @param Logger          $logger Monolog Logger
      *
      * @return Locomotive
      **/
-    private function bootstrap(InputInterface $input, ConsoleLogger $logger)
+    private function bootstrap(InputInterface $input, Logger $logger)
     {
         // load and merge default and user config values with CLI input
         $config = new Configurator($input, $logger);
@@ -182,7 +182,7 @@ class Locomotive
         $this->movedItems = new Collection;
 
         // setting working directory
-        if (null == $this->options['working-dir']) {
+        if (null === $this->options['working-dir']) {
             $this->options['working-dir'] = BASEPATH . '/app/storage/working/';
         } else {
             $this->options['working-dir'] = rtrim($this->options['working-dir'], '/') . '/';
@@ -263,7 +263,7 @@ class Locomotive
     {
         // validating list matching for source/target mapping purposes
         if (is_array($this->arguments['target']) && is_array($this->arguments['source'])) {
-            if (count($this->arguments['source']) != count($this->arguments['target'])) {
+            if (count($this->arguments['source']) !== count($this->arguments['target'])) {
                 $this->logger->error('When both the SOURCE and TARGET are path lists, they are assumed to be mapped and their number of paths must match.');
 
                 exit(1);
@@ -279,12 +279,13 @@ class Locomotive
         }
 
         // validating source-target maps from config file
-        if (! array_filter([$this->arguments['source'], $this->arguments['target']])) {
-            if (! $this->options['source-target-map']) {
-                $this->logger->error('Both SOURCE and TARGET arguemnts are missing.');
+        if (
+            ! $this->options['source-target-map']
+            && ! array_filter([$this->arguments['source'], $this->arguments['target']])
+        ) {
+            $this->logger->error('Both SOURCE and TARGET arguemnts are missing.');
 
-                exit(1);
-            }
+            exit(1);
         }
 
         return $this;
@@ -327,13 +328,13 @@ class Locomotive
                        ->addCommand('queue')
                        ->execute(false, true);
 
-        // test for backgrounded process
+        // test for background-ed process
         if (strpos(end($status), 'backgrounded') !== false) {
-            $this->logger->debug('It appears that lftp is NOT backgrounded.');
+            $this->logger->debug('It appears that lftp is NOT background-ed.');
 
             $this->isLftpBackgrounded = false;
         } else {
-            $this->logger->debug('It appears that lftp IS backgrounded.');
+            $this->logger->debug('It appears that lftp IS background-ed.');
 
             $this->isLftpBackgrounded = true;
         }
@@ -375,16 +376,16 @@ class Locomotive
 
         // seperate items into new collections
         if ($queuedKey !== false) {
-            $activeItems = $lftpQueue->slice($activeKey, ($queuedKey - $activeKey));
-            $queuedItems = $lftpQueue->slice(($queuedKey + 1));
+            $activeItems = $lftpQueue->slice($activeKey, $queuedKey - $activeKey);
+            $queuedItems = $lftpQueue->slice($queuedKey + 1);
         } else {
             $activeItems = $lftpQueue->slice($activeKey);
             $queuedItems = null;
         }
 
-        // setting items to empty Collections if they return as empty
-        $activeItems = empty($activeItems) ? new Collection : $activeItems;
-        $queuedItems = empty($queuedItems) ? new Collection : $queuedItems;
+        // setting items to empty Collections if needed
+        $activeItems = ($activeItems instanceof Collection) ? $activeItems : new Collection;
+        $queuedItems = ($queuedItems instanceof Collection) ? $queuedItems : new Collection;
 
         // clean active items
         $activeItems->transform(function($item, $key) {
@@ -447,7 +448,7 @@ class Locomotive
         $this->logger->debug('Beginning local DB queue update.');
 
         if ($this->mappedQueue->count() < 1) {
-            // a backgrounded lftp queue was never detected; assume it has cleared
+            // a background-ed lftp queue was never detected; assume it has cleared
             // since last run and check local items
             $localQueue = LocalQueue::notForRun($this->runId)
                                     ->notFinished()
@@ -474,7 +475,7 @@ class Locomotive
                            ->name($item->name);
                 $finderItem = current(iterator_to_array($finderItem));
 
-                if ($finderItem != false) {
+                if ($finderItem !== false) {
                     $itemSize = $this->calculateItemSize($finderItem);
 
                     // check file size and mark as finished
@@ -564,23 +565,23 @@ class Locomotive
         if (null === $availableSlots) {
             $lftpQueueCount = $this->lftpQueueCount ?: 0;
             
-            // assume lftp queue is innactive
+            // assume lftp queue is inactive
             $availableSlots = $this->options['transfer-limit'] - $lftpQueueCount;
 
             if ($availableSlots === 0) {
                 $this->logger->info('All transfer slots are full.');
 
-                // no transfers occured for program output
+                // no transfers occurred for program output
                 $this->newTransfers = false;
 
                 return $this;
             } else {
-                $this->logger->info("Setting available transfer slots to $availableSlots.");
+                $this->logger->debug("Setting available transfer slots to $availableSlots.");
             }
         }
 
         // get listing of items from all source directories
-        $this->logger->info('Retrieving all available items from host source(s).');
+        $this->logger->debug('Retrieving all available items from host source(s).');
         $sourceItems = $this->getSourceItems();
 
         // filter source items list of any seen/fetched items
@@ -598,7 +599,7 @@ class Locomotive
         $transferList->each(function($item) {
             // parse out path to send to lftp
             $transferPath = $item->getPath();
-            preg_match("@ssh2.sftp://(.+?)/(.+)@us", $transferPath, $matches);
+            preg_match('@ssh2.sftp://(.+?)/(.+)@us', $transferPath, $matches);
             $transferPath = "/$matches[2]/";
 
             if ($item->isDir()) {
@@ -664,7 +665,7 @@ class Locomotive
      **/
     public function moveFinished()
     {
-        $this->logger->debug('Moving finished items.');
+        $this->logger->info('Moving finished items.');
 
         // getting finished items that haven't been moved yet
         $finished = LocalQueue::finished()
@@ -915,9 +916,7 @@ class Locomotive
             });
         }
 
-        $cleanedItems = $orderedItems->take($slots)->filter();
-
-        return $cleanedItems;
+        return $orderedItems->take($slots)->filter();
     }
 
     /**
@@ -1045,7 +1044,7 @@ class Locomotive
     /**
      * Gets the parsed options.
      *
-     * @return ConsoleLogger
+     * @return array
      */
     public function getOptions()
     {
@@ -1055,7 +1054,7 @@ class Locomotive
     /**
      * Gets the console input.
      *
-     * @return OutputInterface
+     * @return InputInterface
      */
     public function getInput()
     {
@@ -1075,7 +1074,7 @@ class Locomotive
     /**
      * Gets the console logger.
      *
-     * @return ConsoleLogger
+     * @return Logger
      */
     public function getLogger()
     {

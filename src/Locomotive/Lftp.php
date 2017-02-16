@@ -13,7 +13,7 @@
 
 namespace Locomotive;
 
-use Symfony\Component\Console\Logger\ConsoleLogger;
+use Monolog\Logger;
 
 class Lftp
 {
@@ -23,7 +23,7 @@ class Lftp
     protected $options = array();
 
     /**
-     * @var ConsoleLogger
+     * @var Logger
      **/
     protected $logger;
 
@@ -37,14 +37,14 @@ class Lftp
     /**
      * A list of all commands that have been executed.
      *
-     * @var Array
+     * @var array
      **/
     protected $commandLog = array();
 
     /**
      * The current commands array.
      *
-     * @var Array
+     * @var array
      **/
     protected $commands = array();
 
@@ -58,9 +58,10 @@ class Lftp
     /**
      * Class Constructor.
      *
-     * @param Array $options A place to pass through some settings
+     * @param array  $options A place to pass through some settings
+     * @param Logger $logger  A Monolog instance
      */
-    public function __construct($options, ConsoleLogger $logger)
+    public function __construct($options, Logger $logger)
     {
         $this->options = $options;
         $this->logger = $logger;
@@ -71,15 +72,15 @@ class Lftp
         // handle connections w/ ssh key file
         if ($this->options['private-keyfile']) {
             $cmd = "set sftp:connect-program \"ssh -a -x -i " . $this->options['private-keyfile'] . "\";"
-                . " connect -p " . $this->options['port'] . " -u "
-                . $this->options['username'] . "," . $this->options['password']
-                . " sftp://" . $this->options['host']
+                . ' connect -p ' . $this->options['port'] . ' -u '
+                . $this->options['username'] . ',' . $this->options['password']
+                . ' sftp://' . $this->options['host']
             ;
         // try with username and password
         } else {
-            $cmd = "connect -p " . $this->options['port'] . " -u "
-                . $this->options['username'] . "," . $this->options['password']
-                . " sftp://" . $this->options['host']
+            $cmd = 'connect -p ' . $this->options['port'] . ' -u '
+                . $this->options['username'] . ',' . $this->options['password']
+                . ' sftp://' . $this->options['host']
             ;
         }
 
@@ -94,7 +95,7 @@ class Lftp
 
         $this->addCommand($cmd);
 
-        $this->logger->info("Speed limit set to $limit Bps.");
+        $this->logger->debug("Speed limit set to $limit Bps.");
 
         return $this;
     }
@@ -105,7 +106,7 @@ class Lftp
 
         $this->addCommand($cmd);
 
-        $this->logger->info("Parallel transfer limit set to $limit item(s).");
+        $this->logger->debug("Parallel transfer limit set to $limit item(s).");
 
         return $this;
     }
@@ -126,7 +127,7 @@ class Lftp
     public function mirrorDir($path, $pget = false, $parallel = false, $queue = false)
     {
         // escape problem characters in path
-        $path = str_replace(" ", "\\ ", addslashes($path));
+        $path = str_replace(' ', "\\ ", addslashes($path));
 
         $cmd = 'mirror -c';
 
@@ -152,7 +153,7 @@ class Lftp
     public function pgetFile($path, $conn = false, $queue = false)
     {
         // escape problem characters in path
-        $path = str_replace(" ", "\\ ", addslashes($path));
+        $path = str_replace(' ', "\\ ", addslashes($path));
 
         $cmd = 'pget -c';
 
@@ -191,7 +192,7 @@ class Lftp
         if ($attach === true) {
             $this->command .= '" | lftp -c attach';
 
-            if (! is_null($terminalId)) {
+            if (null !== $terminalId) {
                 $this->command .= " $terminalId";
             }
         }
@@ -217,11 +218,10 @@ class Lftp
         }
 
         // add command to log
-        array_push($this->commandLog, $this->command);
+        $this->commandLog[] = $this->command;
 
         // clear command variables
-        unset($this->command);
-        unset($this->commands);
+        unset($this->command, $this->commands);
         
         return $output;
     }
@@ -245,9 +245,6 @@ class Lftp
 
     public function lastCommand()
     {
-        $commandLog = $this->getCommandLog();
-        $lastCommand = end($commandLog);
-
-        return $lastCommand;
+        return end($this->getCommandLog());
     }
 }

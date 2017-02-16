@@ -14,21 +14,26 @@
 
 namespace Locomotive\Command;
 
-use Psr\Log\LoggerInterface;
-use Psr\Log\LogLevel;
+use Bramus\Monolog\Formatter\ColoredLineFormatter;
+use Monolog\Formatter\LineFormatter;
+use Monolog\Handler\RotatingFileHandler;
+use Monolog\Logger;
+use Monolog\Handler\StreamHandler;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Filesystem\LockHandler;
-use Symfony\Component\Console\Logger\ConsoleLogger;
 use Locomotive\Database\DatabaseManager;
 use Locomotive\Locomotive;
 
 class Locomote extends Command
 {
-    private $formatLevelMap;
+    /**
+     * @var Logger
+     **/
+    protected $logger;
 
     /**
      * Sets command options and validates input.
@@ -127,13 +132,29 @@ class Locomote extends Command
      **/
     protected function initialize(InputInterface $input, OutputInterface $output)
     {
-        // setup some custom coloring for log levels
-        $this->formatLevelMap = [
-            LogLevel::DEBUG     => 'fg=default',
-            LogLevel::INFO      => 'fg=default',
-            LogLevel::NOTICE    => 'fg=green',
-            LogLevel::WARNING   => 'fg=yellow',
-        ];
+        if ($input->hasParameterOption('-vvv')) {
+            $consoleLogLevel = Logger::DEBUG;
+        } else if ($input->hasParameterOption('-vv')) {
+            $consoleLogLevel = Logger::INFO;
+        } else if ($input->hasParameterOption('-v')) {
+            $consoleLogLevel = Logger::NOTICE;
+        } else if ($input->hasParameterOption('-q')) {
+            $consoleLogLevel = Logger::EMERGENCY;
+        } else {
+            $consoleLogLevel = Logger::ERROR;
+        }
+
+        $stdoutLogFormat = "%message%\n";
+        $stdoutHandler = new StreamHandler('php://stdout', $consoleLogLevel);
+        $stdoutHandler->setFormatter(new ColoredLineFormatter(null, $stdoutLogFormat));
+
+        $rotatingFileFormat = "[%datetime%] %channel%.%level_name%: %message%\n";
+        $rotatingFileHandler = new RotatingFileHandler(BASEPATH . '/app/storage/logs/locomotive.log', 0, Logger::DEBUG);
+        $rotatingFileHandler->setFormatter(new LineFormatter($rotatingFileFormat));
+
+        $this->logger = new Logger('loco');
+        $this->logger->pushHandler($stdoutHandler);
+        $this->logger->pushHandler($rotatingFileHandler);
     }
 
     /**
@@ -141,12 +162,11 @@ class Locomote extends Command
      *
      * @param InputInterface  $input  An Input instance
      * @param OutputInterface $output An Output instance
+     *
+     * @return void
      **/
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $logger = new ConsoleLogger($output, array(), $this->formatLevelMap);
-        $outputFormatter = $this->getHelper('formatter');
-
         // creating a unique lock id to enable running Locomotive as multiple,
         // concurrent instances.
         $lockid = md5(
@@ -159,19 +179,19 @@ class Locomote extends Command
         // create a lock
         $lock = new LockHandler("locomotive-$lockid");
         if (! $lock->lock()) {
-            $logger->notice('Locomotive is already running with these arguments in another process.');
+            $this->logger->notice('Locomotive is already running with these arguments in another process.');
 
             return 0;
         }
 
         // setup database connection and perform any necessary maintenance
-        $DBM = new DatabaseManager($output, $logger);
+        $DBM = new DatabaseManager($output, $this->logger);
         $DBM->doMaintenance()
             ->connect();
         $DB = $DBM->getConnection();
 
         // instantiate Locomotive
-        $locomotive = new Locomotive($input, $output, $logger, $DB);
+        $locomotive = new Locomotive($input, $output, $this->logger, $DB);
 
         // initial probing for general lftp state
         $lftpQueue = $locomotive->getLftpStatus();
@@ -188,33 +208,26 @@ class Locomote extends Command
             ->updateLocalQueue()
             ->initiateTransfers()
             ->moveFinished()
-            ->removeSourceFiles()
-        ;
+            ->removeSourceFiles();
         
         // write main status to output: new transfers
         if ($locomotive->newTransfers) {
-            $output->writeln('New transfers were started:');
-            $messageLines = array();
-            $locomotive->newTransfers->each(function($item) use (&$messageLines) {
-                $messageLines[] = $item->getBasename();
+            $thisLogger = &$this->logger;
+            $locomotive->newTransfers->each(function($item) use ($thisLogger) {
+                $thisLogger->info('New transfer started: ' . $item->getBasename());
             });
-            $formattedBlock = $outputFormatter->formatBlock($messageLines, 'info');
-            $output->writeln($formattedBlock);
         } else {
-            $output->writeln('Locomotive did not start any new transfers.');
+            $this->logger->info('Locomotive did not start any new transfers.');
         }
 
         // write main status to output: moved items
         if ($locomotive->movedItems->count() > 0) {
-            $output->writeln('Finished items were moved:');
-            $messageLines = array();
-            $locomotive->movedItems->each(function($item) use (&$messageLines) {
-                $messageLines[] = $item->name;
+            $thisLogger = &$this->logger;
+            $locomotive->movedItems->each(function($item) use ($thisLogger) {
+                $thisLogger->info('Finished item moved: ' . $item->name);
             });
-            $formattedBlock = $outputFormatter->formatBlock($messageLines, 'info');
-            $output->writeln($formattedBlock);
         } else {
-            $output->writeln('Locomotive did not move any transfered items.');
+            $this->logger->info('Locomotive did not move any transfered items.');
         }
 
         // manually releasing lock

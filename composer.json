@@ -12,7 +12,6 @@
         "php": ">=5.6.14",
         "ext-ssh2": "*",
         "ext-sqlite3": "*",
-        "psr/log": "~1.0",
         "robmorgan/phinx": "~0.4",
         "illuminate/database": "5.4",
         "illuminate/support": "5.4",
@@ -20,7 +19,9 @@
         "symfony/console": "~2.7",
         "symfony/config": "~2.7",
         "symfony/yaml": "~2.7",
-        "symfony/finder": "~2.7"
+        "symfony/finder": "~2.7",
+        "monolog/monolog": "^1.22",
+        "bramus/monolog-colored-line-formatter": "~2.0"
     },
     "require-dev": {
         "symfony/var-dumper": "~2.7",

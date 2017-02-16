@@ -14,37 +14,36 @@
 
 namespace Locomotive\Configuration;
 
+use Monolog\Logger;
 use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Logger\ConsoleLogger;
 use Symfony\Component\Config\Definition\Processor;
 use Symfony\Component\Yaml\Yaml;
 use Carbon\Carbon;
-use Locomotive\Configuration\LocomoteConfiguration;
 
 class Configurator
 {
     /**
-     * @var ConsoleLogger
+     * @var Logger
      **/
     protected $logger;
 
     /**
-     * @var Array
+     * @var array
      **/
     protected $defaults;
 
     /**
-     * @var Array
+     * @var array
      **/
     protected $user;
 
     /**
-     * @var Array
+     * @var array
      **/
     protected $cli;
 
     /**
-     * @var Array
+     * @var array
      **/
     protected $config;
 
@@ -59,8 +58,9 @@ class Configurator
      * elsewhere, and passing in YAML file locations (and making use of FileLoader)
      *
      * @param InputInterface  $input  An Input instance
+     * @param Logger          $logger A Monolog instance
      */
-    public function __construct(InputInterface $input, ConsoleLogger $logger)
+    public function __construct(InputInterface $input, Logger $logger)
     {
         $this->logger = $logger;
 
@@ -68,8 +68,6 @@ class Configurator
              ->loadUserConfiguration()
              ->loadCliConfiguration($input)
              ->processConfigurationValues($input);
-
-        return $this;
     }
 
     /**
@@ -108,7 +106,7 @@ class Configurator
             $this->logger->debug('User YAML config loaded from: ' . $userHomeConfigFile);
         } elseif (file_exists($userConfigFile)) {
             $this->user = Yaml::parse(file_get_contents($userConfigFile));
-            $this->logger->debug('User YAML config loaded.');
+            $this->logger->debug('User YAML config loaded from: ' . $userConfigFile);
         } else {
             $this->logger->warning('No user config file was found.');
             $this->user = array();
@@ -127,7 +125,7 @@ class Configurator
     private function loadCliConfiguration(InputInterface $input)
     {
         $this->cli = array_filter($input->getOptions(), function($item, $key) {
-            if (! in_array($key, ['help', 'quiet', 'verbose', 'version', 'ansi', 'no-ansi', 'no-interaction'])) {
+            if (! in_array($key, ['help', 'quiet', 'verbose', 'version', 'ansi', 'no-ansi', 'no-interaction'], true)) {
                 return $item !== null;
             }
         }, ARRAY_FILTER_USE_BOTH);
@@ -154,13 +152,14 @@ class Configurator
             if (
                 isset($values['remove-sources'])
                 && (
-                    ! isset($values['remove-sources']['remove'])
-                    || is_null($values['remove-sources']['remove'])
+                    ! array_key_exists('remove', $values['remove-sources'])
+                    || null === $values['remove-sources']['remove']
                 )
             ) {
                $values['remove-sources']['remove'] = false;
             }
         }
+        unset($values);
 
         $processor = new Processor();
         $configuration = new LocomoteConfiguration();
@@ -184,8 +183,8 @@ class Configurator
     private function parseSpeedSchedule()
     {
         // defer to speed limit set on command line
-        if (isset($this->cli['speed-limit'])) {
-            return;
+        if (array_key_exists('speed-limit', $this->cli)) {
+            return $this;
         }
 
         if (count($this->config['speed-schedule']) > 0) {
@@ -196,7 +195,6 @@ class Configurator
 
                 if (Carbon::now()->between($begin, $end)) {
                     $this->config['speed-limit'] = $limit;
-
                     $this->logger->info("The speed limit is being set from a schedule: $limit Bps.");
                 }
             }

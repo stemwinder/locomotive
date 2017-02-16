@@ -26,10 +26,10 @@ class BaseApplication extends Application
      *
      * Initialize the Locomotive console application.
      *
-     * @param string $version The Application Name
+     * @param string $name    The Application Name
      * @param string $version The Application Version
      */
-    public function __construct($name = 'Locomotive', $version = '1.0.2')
+    public function __construct($name = 'Locomotive', $version = '1.1.0')
     {
         // setting script execution time to unlimited just to be safe. This should
         // default to unlimited for PHP CLI on most systems, though.

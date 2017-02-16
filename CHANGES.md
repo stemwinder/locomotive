@@ -1,5 +1,9 @@
 # Locomotive Change Log
 
+<a name="1.1.0"></a>
+## 1.1.0
+- Adds support for logging to daily-rotating files
+
 <a name="1.0.3"></a>
 ## 1.0.3
 - Addresses [PHP Net Bug #73561](https://bugs.php.net/bug.php?id=73561) introduced in PHP version 5.6.28 and 7.0.13 by excplictily casting sFTP over SSH2-wrapped stream resources to integers

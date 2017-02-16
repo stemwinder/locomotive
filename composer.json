@@ -20,7 +20,8 @@
         "symfony/config": "~2.7",
         "symfony/yaml": "~2.7",
         "symfony/finder": "~2.7",
-        "monolog/monolog": "^1.22"
+        "monolog/monolog": "^1.22",
+        "bramus/monolog-colored-line-formatter": "~2.0"
     },
     "require-dev": {
         "symfony/var-dumper": "~2.7",

@@ -53,12 +53,11 @@ class Locomote extends Command
                 InputArgument::OPTIONAL,
                 'The full path to the SOURCE directory. May also be a colon-delimited source list.'
             )
-             ->addArgument(
+            ->addArgument(
                 'target',
                 InputArgument::OPTIONAL,
                 'The full path to the TARGET directory. May also be a colon-delimited target list map.'
-            )
-        ;
+            );
 
         $this
             ->addOption(
@@ -120,25 +119,24 @@ class Locomote extends Command
                 'm',
                 InputOption::VALUE_REQUIRED,
                 'Maximum retry attempts for a failed or interrupted transfer'
-            )
-        ;
+            );
     }
 
     /**
      * Initial settings for the the command.
      *
-     * @param InputInterface  $input  An Input instance
+     * @param InputInterface $input An Input instance
      * @param OutputInterface $output An Output instance
      **/
     protected function initialize(InputInterface $input, OutputInterface $output)
     {
         if ($input->hasParameterOption('-vvv')) {
             $consoleLogLevel = Logger::DEBUG;
-        } else if ($input->hasParameterOption('-vv')) {
+        } elseif ($input->hasParameterOption('-vv')) {
             $consoleLogLevel = Logger::INFO;
-        } else if ($input->hasParameterOption('-v')) {
+        } elseif ($input->hasParameterOption('-v')) {
             $consoleLogLevel = Logger::NOTICE;
-        } else if ($input->hasParameterOption('-q')) {
+        } elseif ($input->hasParameterOption('-q')) {
             $consoleLogLevel = Logger::EMERGENCY;
         } else {
             $consoleLogLevel = Logger::ERROR;
@@ -160,7 +158,7 @@ class Locomote extends Command
     /**
      * Executes the command.
      *
-     * @param InputInterface  $input  An Input instance
+     * @param InputInterface $input An Input instance
      * @param OutputInterface $output An Output instance
      *
      * @return void
@@ -169,16 +167,11 @@ class Locomote extends Command
     {
         // creating a unique lock id to enable running Locomotive as multiple,
         // concurrent instances.
-        $lockid = md5(
-            serialize([
-                $input->getArguments(),
-                $input->getOptions(),
-            ]
-        ));
+        $lockid = md5(serialize([$input->getArguments(), $input->getOptions()]));
 
         // create a lock
         $lock = new LockHandler("locomotive-$lockid");
-        if (! $lock->lock()) {
+        if (!$lock->lock()) {
             $this->logger->notice('Locomotive is already running with these arguments in another process.');
 
             return 0;
@@ -203,17 +196,16 @@ class Locomote extends Command
         }
 
         // run Locomotive queue updates, transfers, and file handling
-        $locomotive
-            ->setLimits()
-            ->updateLocalQueue()
-            ->initiateTransfers()
-            ->moveFinished()
-            ->removeSourceFiles();
-        
+        $locomotive->setLimits()
+                   ->updateLocalQueue()
+                   ->initiateTransfers()
+                   ->moveFinished()
+                   ->removeSourceFiles();
+
         // write main status to output: new transfers
         if ($locomotive->newTransfers) {
             $thisLogger = &$this->logger;
-            $locomotive->newTransfers->each(function($item) use ($thisLogger) {
+            $locomotive->newTransfers->each(function ($item) use ($thisLogger) {
                 $thisLogger->info('New transfer started: ' . $item->getBasename());
             });
         } else {
@@ -223,7 +215,7 @@ class Locomote extends Command
         // write main status to output: moved items
         if ($locomotive->movedItems->count() > 0) {
             $thisLogger = &$this->logger;
-            $locomotive->movedItems->each(function($item) use ($thisLogger) {
+            $locomotive->movedItems->each(function ($item) use ($thisLogger) {
                 $thisLogger->info('Finished item moved: ' . $item->name);
             });
         } else {

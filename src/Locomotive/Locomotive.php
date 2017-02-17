@@ -45,7 +45,7 @@ class Locomotive
      **/
     protected $output;
 
-     /**
+    /**
      * @var Capsule
      **/
     protected $DB;
@@ -55,7 +55,7 @@ class Locomotive
      **/
     public $lftp;
 
-     /**
+    /**
      * @var SSH2 Resource
      **/
     protected $sshSession;
@@ -130,10 +130,10 @@ class Locomotive
     /**
      * Class Constructor.
      *
-     * @param InputInterface                        $input  An Input instance
-     * @param OutputInterface                       $output An Output instance
-     * @param Logger                                $logger Monolog Logger
-     * @param \Illuminate\Database\Capsule\Manager  $DB
+     * @param InputInterface $input An Input instance
+     * @param OutputInterface $output An Output instance
+     * @param Logger $logger Monolog Logger
+     * @param \Illuminate\Database\Capsule\Manager $DB
      */
     public function __construct(
         InputInterface $input,
@@ -152,15 +152,14 @@ class Locomotive
         $this->dependencyCheck()
              ->bootstrap($input, $logger)
              ->setPaths()
-             ->validatePaths()
-        ;
+             ->validatePaths();
     }
 
     /**
      * Bootstrap Locomotive.
      *
-     * @param InputInterface  $input  An Input instance
-     * @param Logger          $logger Monolog Logger
+     * @param InputInterface $input An Input instance
+     * @param Logger $logger Monolog Logger
      *
      * @return Locomotive
      **/
@@ -208,11 +207,11 @@ class Locomotive
     private function dependencyCheck()
     {
         // check for lFTP
-        if (! `which lftp`) {
+        if (!`which lftp`) {
             $this->logger->critical(
                 "LFTP is either not installed on this system, or not in the path.\n"
-                ."Please provide the path in the Locomotive config or find out\n"
-                ."more about LFTP by visiting: https://github.com/lavv17/lftp"
+                . "Please provide the path in the Locomotive config or find out\n"
+                . "more about LFTP by visiting: https://github.com/lavv17/lftp"
             );
 
             return 0;
@@ -229,26 +228,25 @@ class Locomotive
     private function setPaths()
     {
         // attempt to set source/target from config file if not proivided at CLI
-        if (! array_filter([
-            $this->input->getArgument('source'),
-            $this->input->getArgument('target')
-        ])) {
+        if (!array_filter([
+                $this->input->getArgument('source'),
+                $this->input->getArgument('target'),
+            ])
+        ) {
             $this->arguments['source'] = array_keys($this->options['source-target-map']);
             $this->arguments['target'] = array_values($this->options['source-target-map']);
-        // setting SOURCE to either single path or list
+            // setting SOURCE to either single path or list
         } else {
             $sourceArg = $this->input->getArgument('source');
             $this->arguments['source'] = str_contains($sourceArg, ':')
                 ? explode(':', $sourceArg)
-                : $sourceArg
-            ;
+                : $sourceArg;
 
             // setting TARGET to either single path or list
             $targetArg = $this->input->getArgument('target');
             $this->arguments['target'] = str_contains($targetArg, ':')
                 ? explode(':', $targetArg)
-                : $targetArg
-            ;
+                : $targetArg;
         }
 
         return $this;
@@ -268,11 +266,11 @@ class Locomotive
 
                 exit(1);
             }
-        } elseif (is_array($this->arguments['target']) && ! is_array($this->arguments['source'])) {
+        } elseif (is_array($this->arguments['target']) && !is_array($this->arguments['source'])) {
             $this->logger->error('The provided TARGET is a list of paths, but the SOURCE is not. I don\'t know what to do.');
 
             exit(1);
-        } elseif (! is_null($this->arguments['source']) && is_null($this->arguments['target'])) {
+        } elseif (null !== $this->arguments['source'] && null === $this->arguments['target']) {
             $this->logger->error('If the SOURCE arguement is used at the CLI, then the TARGET must be provided at the CLI as well.');
 
             exit(1);
@@ -280,8 +278,8 @@ class Locomotive
 
         // validating source-target maps from config file
         if (
-            ! $this->options['source-target-map']
-            && ! array_filter([$this->arguments['source'], $this->arguments['target']])
+            !$this->options['source-target-map']
+            && !array_filter([$this->arguments['source'], $this->arguments['target']])
         ) {
             $this->logger->error('Both SOURCE and TARGET arguemnts are missing.');
 
@@ -303,7 +301,7 @@ class Locomotive
     {
         if (is_array($this->arguments['target']) && is_array($this->arguments['source'])) {
             // get the key for the matching array source
-            $matchingSource = array_filter($this->arguments['source'], function($source, $key) use ($sourceDir) {
+            $matchingSource = array_filter($this->arguments['source'], function ($source, $key) use ($sourceDir) {
                 return str_contains($source, rtrim($sourceDir, '/'));
             }, ARRAY_FILTER_USE_BOTH);
 
@@ -324,9 +322,8 @@ class Locomotive
     {
         $this->logger->debug('Checking lftp status via queue attachment attempt.');
 
-        $status = $this->lftp
-                       ->addCommand('queue')
-                       ->execute(false, true);
+        $status = $this->lftp->addCommand('queue')
+                             ->execute(false, true);
 
         // test for background-ed process
         if (strpos(end($status), 'backgrounded') !== false) {
@@ -365,12 +362,12 @@ class Locomotive
         $this->logger->debug("Setting the lftp terminal attachment ID to $this->lftpTerminalId.");
 
         // seek to beginning of active items
-        $activeKey = $lftpQueue->search(function($item) {
+        $activeKey = $lftpQueue->search(function ($item) {
             return str_contains($item, 'Now executing:');
         });
 
         // seek to beginning of queued items
-        $queuedKey = $lftpQueue->search(function($item) {
+        $queuedKey = $lftpQueue->search(function ($item) {
             return str_contains($item, 'Commands queued:');
         });
 
@@ -388,7 +385,7 @@ class Locomotive
         $queuedItems = ($queuedItems instanceof Collection) ? $queuedItems : new Collection;
 
         // clean active items
-        $activeItems->transform(function($item, $key) {
+        $activeItems->transform(function ($item, $key) {
             if ($key === 0) {
                 return substr($item, 15);
             } else {
@@ -397,7 +394,7 @@ class Locomotive
         });
 
         // clean queued items
-        $queuedItems->transform(function($item, $key) {
+        $queuedItems->transform(function ($item, $key) {
             return ltrim($item);
         });
 
@@ -408,8 +405,8 @@ class Locomotive
         $localQueue = LocalQueue::notFinished()->get();
 
         // map lftp queue items to local DB queue items
-        $localQueue->each(function($localItem, $key) use ($mergedLftpQueue) {
-            $mappedItem = $mergedLftpQueue->search(function($aItem, $aKey) use ($localItem) {
+        $localQueue->each(function ($localItem, $key) use ($mergedLftpQueue) {
+            $mappedItem = $mergedLftpQueue->search(function ($aItem, $aKey) use ($localItem) {
                 return str_contains($aItem, $localItem->name);
             });
 
@@ -468,7 +465,7 @@ class Locomotive
         if ($localQueue->count() > 0) {
             $this->logger->debug('Unfinished items found in local queue. Checking for completeness.');
 
-            $localQueue->each(function($item, $key) {
+            $localQueue->each(function ($item, $key) {
                 // seeking to file location
                 $finderItem = new Finder();
                 $finderItem->in($this->options['working-dir'])
@@ -502,7 +499,7 @@ class Locomotive
                 }
             });
         }
-        
+
         return $this;
     }
 
@@ -511,7 +508,7 @@ class Locomotive
      *
      * @param Finder $item The transfered item
      * @param string $transferPath The absolute transfer path
-     * 
+     *
      * @return LocalQueue The Eloquent model
      **/
     private function recordItemToQueue($item, $transferPath)
@@ -525,9 +522,7 @@ class Locomotive
         $target = $this->mapTargetFromSource($transferPath);
 
         // write the item to the local DB queue
-        $localQueue = LocalQueue::firstOrNew([
-            'hash' => $hash,
-        ]);
+        $localQueue = LocalQueue::firstOrNew(['hash' => $hash]);
 
         $localQueue->run_id = $this->runId;
         $localQueue->name = $item->getBasename();
@@ -557,14 +552,14 @@ class Locomotive
      * active/new transfers to the local queue.
      *
      * @param int $availableSlots Number of slots available for transfer
-     * 
+     *
      * @return Locomotive
      **/
     public function initiateTransfers($availableSlots = null)
     {
         if (null === $availableSlots) {
             $lftpQueueCount = $this->lftpQueueCount ?: 0;
-            
+
             // assume lftp queue is inactive
             $availableSlots = $this->options['transfer-limit'] - $lftpQueueCount;
 
@@ -596,7 +591,7 @@ class Locomotive
         $this->lftp->setSpeedLimit($this->options['speed-limit']);
 
         // issue lftp commands depending on `isDir()` or `isFile()`
-        $transferList->each(function($item) {
+        $transferList->each(function ($item) {
             // parse out path to send to lftp
             $transferPath = $item->getPath();
             preg_match('@ssh2.sftp://(.+?)/(.+)@us', $transferPath, $matches);
@@ -644,7 +639,7 @@ class Locomotive
 
             // execute transfer
             $this->lftp->execute(true, $this->isLftpBackgrounded, $this->lftpTerminalId);
-            
+
             // write transferred items to global variable for output
             $this->newTransfers = $transferList;
         } else {
@@ -677,12 +672,12 @@ class Locomotive
             $workingDir = $this->options['working-dir'];
             $fs = new Filesystem();
 
-            $finished->each(function($item, $key) use ($workingDir, $fs) {
+            $finished->each(function ($item, $key) use ($workingDir, $fs) {
                 // move item
                 $targetDir = rtrim($item->target_dir, '/') . '/';
 
                 // check for existence of target directory
-                if (! $fs->exists($targetDir)) {
+                if (!$fs->exists($targetDir)) {
                     $this->logger->error("The target directory could not be found: $targetDir");
                 } else {
                     try {
@@ -732,7 +727,7 @@ class Locomotive
 
             // applying source exclusion from config
             if (count($this->options['remove-sources']['exclude']) > 0) {
-                $finished = $finished->reject(function($item) {
+                $finished = $finished->reject(function ($item) {
                     foreach ($this->options['remove-sources']['exclude'] as $exclusion) {
                         if (str_contains(trim($exclusion, '/'), trim($item->source_dir, '/'))) {
                             return true;
@@ -741,7 +736,7 @@ class Locomotive
                 });
             }
 
-            $finished->each(function($item, $key) use ($fs) {
+            $finished->each(function ($item, $key) use ($fs) {
                 $sourceItemPath = rtrim($item->source_dir, '/') . '/' . $item->name;
                 $sourceStream = 'ssh2.sftp://' . (int)$this->sshSession . $sourceItemPath;
 
@@ -785,7 +780,7 @@ class Locomotive
         $items = new Collection;
 
         // casting `$sources` to an array to normalize data structure
-        if (! is_array($sources)) {
+        if (!is_array($sources)) {
             $sources = array($sources);
         }
 
@@ -804,7 +799,7 @@ class Locomotive
             $collectedHostItems = Collection::make(iterator_to_array($hostItems, false));
 
             // reject items that are still being unpacked
-            $collectedHostItems = $collectedHostItems->reject(function($item) {
+            $collectedHostItems = $collectedHostItems->reject(function ($item) {
                 if (starts_with($item->getBasename(), ['_UNPACK_', '_FAILED_'])) {
                     $this->logger->debug("An item was pattern-rejected: {$item->getBasename()}");
 
@@ -814,7 +809,7 @@ class Locomotive
 
             // reject items that do not pass an optional cutoff date
             if (null !== $this->options['newer-than']) {
-                $collectedHostItems = $collectedHostItems->reject(function($item) {
+                $collectedHostItems = $collectedHostItems->reject(function ($item) {
                     if ($item->getMTime() < strtotime($this->options['newer-than'])) {
                         $this->logger->debug("An item was date-cutoff rejected: {$item->getBasename()}");
 
@@ -836,7 +831,7 @@ class Locomotive
      * name by hashing the name with the mod time of the item.
      *
      * @param Collection $items
-     * 
+     *
      * @return Collection
      **/
     private function filterSourceItems($items)
@@ -864,8 +859,8 @@ class Locomotive
             $seen = $seen->diff($retry);
         }
 
-        $items->transform(function(&$sourceItems, $sourceDir) use ($seen) {
-            return $sourceItems->reject(function($item) use ($seen) {
+        $items->transform(function (&$sourceItems, $sourceDir) use ($seen) {
+            return $sourceItems->reject(function ($item) use ($seen) {
                 // filter out items seen in the local queue
                 return $seen->contains(
                     $this->makeHash($item->getBasename(), $item->getMTime())
@@ -874,7 +869,7 @@ class Locomotive
         });
 
         // filter out sources without any items
-        $items = $items->reject(function($source) {
+        $items = $items->reject(function ($source) {
             return $source->isEmpty();
         });
 
@@ -896,21 +891,21 @@ class Locomotive
         $orderedItems = new Collection;
 
         // simple reduction to prevent null listings
-        $items->map(function($sourceListing) use ($slots) {
+        $items->map(function ($sourceListing) use ($slots) {
             return $sourceListing->take($slots);
         });
 
         if ($this->options['zip-sources'] === true) {
             // zip all sources together in alternating fashion
-            for ($i=0; $i <= $slots; $i++) { 
-                $items->each(function($sourceListing, $sourceDir) use ($orderedItems) {
+            for ($i = 0; $i <= $slots; $i++) {
+                $items->each(function ($sourceListing, $sourceDir) use ($orderedItems) {
                     $orderedItems->push($sourceListing->shift());
                 });
             }
         } else {
             // build `$orderedItems` list in FIFO order
-            $items->each(function($sourceListing, $sourceDir) use ($orderedItems) {
-                $sourceListing->each(function($source) use ($orderedItems) {
+            $items->each(function ($sourceListing, $sourceDir) use ($orderedItems) {
+                $sourceListing->each(function ($source) use ($orderedItems) {
                     $orderedItems->push($source);
                 });
             });
@@ -960,7 +955,7 @@ class Locomotive
      *
      * @param string $name The item name
      * @param int $modTime Last modified time in unix timestamp format
-     * 
+     *
      * @return string MD5 Hash
      **/
     public function makeHash($name, $modTime)
@@ -979,11 +974,9 @@ class Locomotive
      **/
     public function setLimits()
     {
-        $this->lftp
-             ->setSpeedLimit($this->options['speed-limit'])
-             ->setQueueTransferLimit($this->options['transfer-limit'])
-             ->execute(false, $this->isLftpBackgrounded, $this->lftpTerminalId)
-        ;
+        $this->lftp->setSpeedLimit($this->options['speed-limit'])
+                   ->setQueueTransferLimit($this->options['transfer-limit'])
+                   ->execute(false, $this->isLftpBackgrounded, $this->lftpTerminalId);
 
         return $this;
     }
@@ -1001,16 +994,16 @@ class Locomotive
     {
         $connection = ssh2_connect($this->arguments['host'], $this->options['port']);
 
-        // handle connections w/ ssh key file
         if ($this->options['private-keyfile']) {
+            // handle connections w/ ssh key file
             $auth = @ssh2_auth_pubkey_file(
                 $connection,
                 $this->options['username'],
                 $this->options['public-keyfile'] ?: $this->options['private-keyfile'] . '.pub',
                 $this->options['private-keyfile']
             );
-        // try with username and password
         } else {
+            // try with username and password
             $auth = @ssh2_auth_password(
                 $connection,
                 $this->options['username'],

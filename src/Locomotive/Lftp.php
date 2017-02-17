@@ -58,8 +58,8 @@ class Lftp
     /**
      * Class Constructor.
      *
-     * @param array  $options A place to pass through some settings
-     * @param Logger $logger  A Monolog instance
+     * @param array $options A place to pass through some settings
+     * @param Logger $logger A Monolog instance
      */
     public function __construct($options, Logger $logger)
     {
@@ -69,19 +69,17 @@ class Lftp
 
     public function connect()
     {
-        // handle connections w/ ssh key file
         if ($this->options['private-keyfile']) {
+            // handle connections w/ ssh key file
             $cmd = "set sftp:connect-program \"ssh -a -x -i " . $this->options['private-keyfile'] . "\";"
                 . ' connect -p ' . $this->options['port'] . ' -u '
                 . $this->options['username'] . ',' . $this->options['password']
-                . ' sftp://' . $this->options['host']
-            ;
-        // try with username and password
+                . ' sftp://' . $this->options['host'];
         } else {
+            // try with username and password
             $cmd = 'connect -p ' . $this->options['port'] . ' -u '
                 . $this->options['username'] . ',' . $this->options['password']
-                . ' sftp://' . $this->options['host']
-            ;
+                . ' sftp://' . $this->options['host'];
         }
 
         $this->connection = $cmd;
@@ -196,7 +194,7 @@ class Lftp
                 $this->command .= " $terminalId";
             }
         }
-        
+
         // execute command
         $this->logger->debug("Executing lftp commands: $this->command");
 
@@ -222,7 +220,7 @@ class Lftp
 
         // clear command variables
         unset($this->command, $this->commands);
-        
+
         return $output;
     }
 

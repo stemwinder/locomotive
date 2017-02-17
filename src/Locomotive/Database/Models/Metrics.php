@@ -18,7 +18,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Metrics extends Model
 {
-	protected $guarded = ['id'];
-	protected $table = 'metrics';
-	public $timestamps = false;
+    protected $guarded = ['id'];
+    protected $table = 'metrics';
+    public $timestamps = false;
 }

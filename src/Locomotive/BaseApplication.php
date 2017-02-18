@@ -75,6 +75,8 @@ class BaseApplication extends Application
      * Gets the default commands that should always be available.
      *
      * @return array An array of default Command instances
+     *
+     * @throws \Symfony\Component\Console\Exception\LogicException
      */
     protected function getDefaultCommands()
     {

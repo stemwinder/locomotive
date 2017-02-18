@@ -171,7 +171,7 @@ class DatabaseManager
         $builtCommand = 'get' . ucfirst($command);
         $commandResult = $this->phinx->$builtCommand();
 
-        if ($this->phinx->getExitCode() != 0) {
+        if ((int)$this->phinx->getExitCode() !== 0) {
             $this->logger->error('There was a problem with database maintenance.');
 
             exit(1);
@@ -199,7 +199,7 @@ class DatabaseManager
     private function getCurrentMigration()
     {
         $matches = array();
-        $databaseStatus = preg_match("/\\d{14}/um", $this->phinxCall('status'), $matches);
+        preg_match("/\\d{14}/um", $this->phinxCall('status'), $matches);
         $currentMigration = $matches[0];
 
         return (int)$currentMigration;
@@ -209,6 +209,8 @@ class DatabaseManager
      * Gets the latest migration version available in the migrations directory,=.
      *
      * @return int The latest migration version
+     *
+     * @throws \InvalidArgumentException
      **/
     private function getLatestMigration()
     {
@@ -229,6 +231,8 @@ class DatabaseManager
     /**
      * Set the database file path and name.
      *
+     * @param string $database Location of the SQLite DB file
+     *
      * @return DatabaseManager
      **/
     private function setDatabase($database)
@@ -241,7 +245,7 @@ class DatabaseManager
     /**
      * Gets the database file path and name.
      *
-     * @return DatabaseManager
+     * @return string
      **/
     public function getDatabase()
     {

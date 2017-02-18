@@ -211,7 +211,7 @@ class Locomotive
     /**
      * Checks for any missing system dependencies. For now, that's just `lftp`.
      *
-     * @return Locomotive
+     * @return mixed
      **/
     private function dependencyCheck()
     {
@@ -238,7 +238,7 @@ class Locomotive
      **/
     private function setPaths()
     {
-        // attempt to set source/target from config file if not proivided at CLI
+        // attempt to set source/target from config file if not provided at CLI
         if (!array_filter([
                 $this->input->getArgument('source'),
                 $this->input->getArgument('target'),
@@ -523,6 +523,8 @@ class Locomotive
      * @param string $transferPath The absolute transfer path
      *
      * @return LocalQueue The Eloquent model
+     *
+     * @throws \InvalidArgumentException
      **/
     private function recordItemToQueue($item, $transferPath)
     {

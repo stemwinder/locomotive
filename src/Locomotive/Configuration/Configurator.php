@@ -74,6 +74,8 @@ class Configurator
      * Loads default config from an expected location.
      *
      * @return Configurator
+     *
+     * @throws \Symfony\Component\Yaml\Exception\ParseException
      **/
     private function loadDefaultConfiguration()
     {
@@ -95,6 +97,8 @@ class Configurator
      * Loads user config from root of app.
      *
      * @return Configurator
+     *
+     * @throws \Symfony\Component\Yaml\Exception\ParseException
      **/
     private function loadUserConfiguration()
     {

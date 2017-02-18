@@ -209,7 +209,7 @@ class Lftp
         }
 
         // deal with exit code failures
-        if ($exitCode != 0) {
+        if ((int)$exitCode !== 0) {
             $this->logger->error(implode(' ', $output));
 
             exit(1);

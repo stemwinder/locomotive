@@ -63,7 +63,7 @@ class UserHookListener extends AbstractListener
             foreach ($this->processors as $processor) {
                 exec("nohup $processor \"$param\" > /dev/null 2>&1 & echo $!", $output, $exitCode);
 
-                if ($exitCode != 0) {
+                if ((int)$exitCode !== 0) {
                     $this->logger->warning('User script error: ' . implode(' ', $output));
                 } else {
                     $this->logger->debug("Executed user script: [$output[0]] `$processor \"$param\"`");

@@ -1,5 +1,12 @@
 # Locomotive Change Log
 
+<a name="1.3.0"></a>
+## 1.3.0
+- Now supports custom post-processing user scripts
+- Introduces event system to support user scripts and future notification updates, etc
+- Updates PHP DocBlocks w/ `@throws` where appropriate
+- Adds configuration options to README
+
 <a name="1.1.0"></a>
 ## 1.1.0
 - Adds support for logging to daily-rotating files

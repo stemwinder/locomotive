@@ -23,6 +23,7 @@ class LocomoteConfiguration implements ConfigurationInterface
      * Defines configuration options for the `locomote` default command.
      *
      * @return TreeBuilder
+     * @throws \RuntimeException
      **/
     public function getConfigTreeBuilder()
     {
@@ -91,6 +92,10 @@ class LocomoteConfiguration implements ConfigurationInterface
                  ->arrayNode('source-target-map')
                     ->useAttributeAsKey(true)
                     ->normalizeKeys(false)
+                    ->performNoDeepMerging()
+                    ->prototype('scalar')->end()
+                ->end()
+                ->arrayNode('post-processors')
                     ->performNoDeepMerging()
                     ->prototype('scalar')->end()
                 ->end()

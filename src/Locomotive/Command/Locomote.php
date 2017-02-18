@@ -15,16 +15,22 @@
 namespace Locomotive\Command;
 
 use Bramus\Monolog\Formatter\ColoredLineFormatter;
+use Illuminate\Database\Capsule\Manager as Capsule;
+use League\Event\Emitter;
+use Locomotive\Configuration\Configurator;
+use Locomotive\Listeners\UserHookListener;
 use Monolog\Formatter\LineFormatter;
 use Monolog\Handler\RotatingFileHandler;
 use Monolog\Handler\SyslogHandler;
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Exception\InvalidArgumentException;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Filesystem\Exception\IOException;
 use Symfony\Component\Filesystem\LockHandler;
 use Locomotive\Database\DatabaseManager;
 use Locomotive\Locomotive;
@@ -35,6 +41,21 @@ class Locomote extends Command
      * @var Logger
      **/
     protected $logger;
+
+    /**
+     * @var Emitter
+     */
+    protected $emitter;
+
+    /**
+     * @var array
+     */
+    protected $config;
+
+    /**
+     * @var Capsule
+     */
+    protected $dbCapsule;
 
     /**
      * Sets command options and validates input.
@@ -128,37 +149,26 @@ class Locomote extends Command
      *
      * @param InputInterface $input An Input instance
      * @param OutputInterface $output An Output instance
+     *
+     * @throws \Exception
      **/
     protected function initialize(InputInterface $input, OutputInterface $output)
     {
-        if ($input->hasParameterOption('-vvv')) {
-            $consoleLogLevel = Logger::DEBUG;
-        } elseif ($input->hasParameterOption('-vv')) {
-            $consoleLogLevel = Logger::INFO;
-        } elseif ($input->hasParameterOption('-v')) {
-            $consoleLogLevel = Logger::NOTICE;
-        } elseif ($input->hasParameterOption('-q')) {
-            $consoleLogLevel = Logger::EMERGENCY;
-        } else {
-            $consoleLogLevel = Logger::ERROR;
-        }
+        $this->setupLogging($input);
 
-        $stdoutLogFormat = "%message%\n";
-        $stdoutHandler = new StreamHandler('php://stdout', $consoleLogLevel);
-        $stdoutHandler->setFormatter(new ColoredLineFormatter(null, $stdoutLogFormat));
+        // load and merge default and user config values with CLI input
+        $config = new Configurator($input, $this->logger);
+        $this->config = $config->getConfig();
 
-        $rotatingFileFormat = "[%datetime%] %channel%.%level_name%: %message%\n";
-        $rotatingFileHandler = new RotatingFileHandler(BASEPATH . '/app/storage/logs/locomotive.log', 0, Logger::DEBUG);
-        $rotatingFileHandler->setFormatter(new LineFormatter($rotatingFileFormat));
+        // instantiate event emitter
+        $this->emitter = new Emitter;
+        $this->setupEvents($this->config);
 
-        $syslogFormat = new LineFormatter('%level_name%: %message%');
-        $syslogHandler = new SyslogHandler('Locomotive', 'local6', Logger::WARNING);
-        $syslogHandler->setFormatter($syslogFormat);
-
-        $this->logger = new Logger('locomotive');
-        $this->logger->pushHandler($stdoutHandler);
-        $this->logger->pushHandler($rotatingFileHandler);
-        $this->logger->pushHandler($syslogHandler);
+        // setup database connection and perform any necessary maintenance
+        $dbm = new DatabaseManager($output, $this->logger);
+        $dbm->doMaintenance()
+            ->connect();
+        $this->dbCapsule = $dbm->getConnection();
     }
 
     /**
@@ -167,7 +177,11 @@ class Locomote extends Command
      * @param InputInterface $input An Input instance
      * @param OutputInterface $output An Output instance
      *
-     * @return void
+     * @return mixed
+     *
+     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
+     * @throws IOException
      **/
     protected function execute(InputInterface $input, OutputInterface $output)
     {
@@ -183,14 +197,15 @@ class Locomote extends Command
             return 0;
         }
 
-        // setup database connection and perform any necessary maintenance
-        $DBM = new DatabaseManager($output, $this->logger);
-        $DBM->doMaintenance()
-            ->connect();
-        $DB = $DBM->getConnection();
-
         // instantiate Locomotive
-        $locomotive = new Locomotive($input, $output, $this->logger, $DB);
+        $locomotive = new Locomotive(
+            $input,
+            $output,
+            $this->config,
+            $this->logger,
+            $this->emitter,
+            $this->dbCapsule
+        );
 
         // initial probing for general lftp state
         $lftpQueue = $locomotive->getLftpStatus();
@@ -230,5 +245,58 @@ class Locomote extends Command
 
         // manually releasing lock
         $lock->release();
+    }
+
+
+    /**
+     * Configure and instantiate logging.
+     *
+     * @param InputInterface $input An Input instance
+     *
+     * @return void
+     *
+     * @throws \Exception
+     */
+    private function setupLogging(InputInterface $input)
+    {
+        if ($input->hasParameterOption('-vvv')) {
+            $consoleLogLevel = Logger::DEBUG;
+        } elseif ($input->hasParameterOption('-vv')) {
+            $consoleLogLevel = Logger::INFO;
+        } elseif ($input->hasParameterOption('-v')) {
+            $consoleLogLevel = Logger::NOTICE;
+        } elseif ($input->hasParameterOption('-q')) {
+            $consoleLogLevel = Logger::EMERGENCY;
+        } else {
+            $consoleLogLevel = Logger::ERROR;
+        }
+
+        $stdoutLogFormat = "%message%\n";
+        $stdoutHandler = new StreamHandler('php://stdout', $consoleLogLevel);
+        $stdoutHandler->setFormatter(new ColoredLineFormatter(null, $stdoutLogFormat));
+
+        $rotatingFileFormat = "[%datetime%] %channel%.%level_name%: %message%\n";
+        $rotatingFileHandler = new RotatingFileHandler(BASEPATH . '/app/storage/logs/locomotive.log', 0, Logger::DEBUG);
+        $rotatingFileHandler->setFormatter(new LineFormatter($rotatingFileFormat));
+
+        $syslogFormat = new LineFormatter('%level_name%: %message%');
+        $syslogHandler = new SyslogHandler('Locomotive', 'local6', Logger::WARNING);
+        $syslogHandler->setFormatter($syslogFormat);
+
+        $this->logger = new Logger('locomotive');
+        $this->logger->pushHandler($stdoutHandler);
+        $this->logger->pushHandler($rotatingFileHandler);
+        $this->logger->pushHandler($syslogHandler);
+    }
+
+
+    /**
+     * Setup emitter listeners
+     *
+     * @param array $config Locomotive config options
+     */
+    private function setupEvents(array $config)
+    {
+        $this->emitter->addListener('event.itemMoved', new UserHookListener($config, $this->logger));
     }
 }

@@ -74,6 +74,8 @@ class Configurator
      * Loads default config from an expected location.
      *
      * @return Configurator
+     *
+     * @throws \Symfony\Component\Yaml\Exception\ParseException
      **/
     private function loadDefaultConfiguration()
     {
@@ -95,6 +97,8 @@ class Configurator
      * Loads user config from root of app.
      *
      * @return Configurator
+     *
+     * @throws \Symfony\Component\Yaml\Exception\ParseException
      **/
     private function loadUserConfiguration()
     {
@@ -176,7 +180,7 @@ class Configurator
     }
 
     /**
-     * Overides the speed limit based on scheduled values in the config file.
+     * Overrides the speed limit based on scheduled values in the config file.
      *
      * @return Configurator
      **/

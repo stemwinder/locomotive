@@ -130,29 +130,7 @@ class Locomote extends Command
      **/
     protected function initialize(InputInterface $input, OutputInterface $output)
     {
-        if ($input->hasParameterOption('-vvv')) {
-            $consoleLogLevel = Logger::DEBUG;
-        } elseif ($input->hasParameterOption('-vv')) {
-            $consoleLogLevel = Logger::INFO;
-        } elseif ($input->hasParameterOption('-v')) {
-            $consoleLogLevel = Logger::NOTICE;
-        } elseif ($input->hasParameterOption('-q')) {
-            $consoleLogLevel = Logger::EMERGENCY;
-        } else {
-            $consoleLogLevel = Logger::ERROR;
-        }
-
-        $stdoutLogFormat = "%message%\n";
-        $stdoutHandler = new StreamHandler('php://stdout', $consoleLogLevel);
-        $stdoutHandler->setFormatter(new ColoredLineFormatter(null, $stdoutLogFormat));
-
-        $rotatingFileFormat = "[%datetime%] %channel%.%level_name%: %message%\n";
-        $rotatingFileHandler = new RotatingFileHandler(BASEPATH . '/app/storage/logs/locomotive.log', 0, Logger::DEBUG);
-        $rotatingFileHandler->setFormatter(new LineFormatter($rotatingFileFormat));
-
-        $this->logger = new Logger('loco');
-        $this->logger->pushHandler($stdoutHandler);
-        $this->logger->pushHandler($rotatingFileHandler);
+        $this->setupLogging($input);
     }
 
     /**
@@ -224,5 +202,40 @@ class Locomote extends Command
 
         // manually releasing lock
         $lock->release();
+    }
+
+
+    /**
+     * Configure and instantiate logging.
+     *
+     * @param InputInterface $input An Input instance
+     *
+     * @return void
+     */
+    private function setupLogging(InputInterface $input)
+    {
+        if ($input->hasParameterOption('-vvv')) {
+            $consoleLogLevel = Logger::DEBUG;
+        } elseif ($input->hasParameterOption('-vv')) {
+            $consoleLogLevel = Logger::INFO;
+        } elseif ($input->hasParameterOption('-v')) {
+            $consoleLogLevel = Logger::NOTICE;
+        } elseif ($input->hasParameterOption('-q')) {
+            $consoleLogLevel = Logger::EMERGENCY;
+        } else {
+            $consoleLogLevel = Logger::ERROR;
+        }
+
+        $stdoutLogFormat = "%message%\n";
+        $stdoutHandler = new StreamHandler('php://stdout', $consoleLogLevel);
+        $stdoutHandler->setFormatter(new ColoredLineFormatter(null, $stdoutLogFormat));
+
+        $rotatingFileFormat = "[%datetime%] %channel%.%level_name%: %message%\n";
+        $rotatingFileHandler = new RotatingFileHandler(BASEPATH . '/app/storage/logs/locomotive.log', 0, Logger::DEBUG);
+        $rotatingFileHandler->setFormatter(new LineFormatter($rotatingFileFormat));
+
+        $this->logger = new Logger('loco');
+        $this->logger->pushHandler($stdoutHandler);
+        $this->logger->pushHandler($rotatingFileHandler);
     }
 }

@@ -16,6 +16,7 @@ namespace Locomotive;
 use Carbon\Carbon;
 use Illuminate\Database\Capsule\Manager as Capsule;
 use Illuminate\Support\Collection;
+use League\Event\Emitter;
 use Locomotive\Configuration\Configurator;
 use Locomotive\Database\Models\LocalQueue;
 use Locomotive\Database\Models\Metrics;
@@ -31,11 +32,6 @@ use Symfony\Component\Finder\SplFileInfo;
 class Locomotive
 {
     /**
-     * @var Logger
-     **/
-    protected $logger;
-
-    /**
      * @var InputInterface
      **/
     protected $input;
@@ -44,6 +40,16 @@ class Locomotive
      * @var OutputInterface
      **/
     protected $output;
+
+    /**
+     * @var Logger
+     **/
+    protected $logger;
+
+    /**
+     * @var Emitter
+     */
+    protected $emitter;
 
     /**
      * @var Capsule
@@ -128,22 +134,25 @@ class Locomotive
     protected $options = array();
 
     /**
-     * Class Constructor.
+     * Locomotive Constructor.
      *
      * @param InputInterface $input An Input instance
      * @param OutputInterface $output An Output instance
      * @param Logger $logger Monolog Logger
+     * @param Emitter $emitter League\Event
      * @param \Illuminate\Database\Capsule\Manager $DB
      */
     public function __construct(
         InputInterface $input,
         OutputInterface $output,
         Logger $logger,
+        Emitter $emitter,
         Capsule $DB
     ) {
         $this->input = $input;
         $this->output = $output;
         $this->logger = $logger;
+        $this->emitter = $emitter;
         $this->DB = $DB;
 
         // initial Locomotive setup, checks, and validation
@@ -520,12 +529,13 @@ class Locomotive
         $hash = $this->makeHash($item->getBasename(), $item->getMTime());
         $transferPath = rtrim($transferPath, '/');
         $target = $this->mapTargetFromSource($transferPath);
+        $name = $item->getBasename();
 
         // write the item to the local DB queue
         $localQueue = LocalQueue::firstOrNew(['hash' => $hash]);
 
         $localQueue->run_id = $this->runId;
-        $localQueue->name = $item->getBasename();
+        $localQueue->name = $name;
         $localQueue->host = $this->arguments['host'];
         $localQueue->source_dir = $transferPath;
         $localQueue->size_bytes = $itemSize['itemSize'];
@@ -632,6 +642,9 @@ class Locomotive
 
             // record transfer in local queue
             $this->recordItemToQueue($item, $transferPath);
+
+            // emit `transferStarted` event
+            $this->emitter->emit('event.transferStarted', $item->getBasename());
         });
 
         if (count($transferList) > 0) {
@@ -660,7 +673,7 @@ class Locomotive
      **/
     public function moveFinished()
     {
-        $this->logger->info('Moving finished items.');
+        $this->logger->info('Looking for finished items.');
 
         // getting finished items that haven't been moved yet
         $finished = LocalQueue::finished()
@@ -685,6 +698,9 @@ class Locomotive
 
                         $item->is_moved = true;
                         $item->save();
+
+                        // emit `itemMoved` event
+                        $this->emitter->emit('event.itemMoved', $targetDir . $item->name);
                     } catch (IOException $e) {
                         $this->logger->error($e->getMessage());
                     }

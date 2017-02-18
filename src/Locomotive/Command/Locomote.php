@@ -15,6 +15,8 @@
 namespace Locomotive\Command;
 
 use Bramus\Monolog\Formatter\ColoredLineFormatter;
+use League\Event\Emitter;
+use Locomotive\Listeners\UserHookListener;
 use Monolog\Formatter\LineFormatter;
 use Monolog\Handler\RotatingFileHandler;
 use Monolog\Logger;
@@ -34,6 +36,12 @@ class Locomote extends Command
      * @var Logger
      **/
     protected $logger;
+
+
+    /**
+     * @var Emitter
+     */
+    protected $emitter;
 
     /**
      * Sets command options and validates input.
@@ -131,6 +139,7 @@ class Locomote extends Command
     protected function initialize(InputInterface $input, OutputInterface $output)
     {
         $this->setupLogging($input);
+        $this->emitter = new Emitter;
     }
 
     /**
@@ -162,7 +171,10 @@ class Locomote extends Command
         $DB = $DBM->getConnection();
 
         // instantiate Locomotive
-        $locomotive = new Locomotive($input, $output, $this->logger, $DB);
+        $locomotive = new Locomotive($input, $output, $this->logger, $this->emitter, $DB);
+
+        // setup event listener bindings
+        $this->setupEvents($locomotive->getOptions());
 
         // initial probing for general lftp state
         $lftpQueue = $locomotive->getLftpStatus();
@@ -237,5 +249,13 @@ class Locomote extends Command
         $this->logger = new Logger('loco');
         $this->logger->pushHandler($stdoutHandler);
         $this->logger->pushHandler($rotatingFileHandler);
+    }
+
+    private function setupEvents(array $config)
+    {
+        $this->emitter->addListener('event.itemMoved', new UserHookListener($config, $this->logger));
+
+        /* TESTING */
+        $this->emitter->emit('event.itemMoved', 'TEST');
     }
 }

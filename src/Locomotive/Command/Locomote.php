@@ -21,6 +21,7 @@ use Locomotive\Configuration\Configurator;
 use Locomotive\Listeners\UserHookListener;
 use Monolog\Formatter\LineFormatter;
 use Monolog\Handler\RotatingFileHandler;
+use Monolog\Handler\SyslogHandler;
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
 use Symfony\Component\Console\Command\Command;
@@ -278,9 +279,14 @@ class Locomote extends Command
         $rotatingFileHandler = new RotatingFileHandler(BASEPATH . '/app/storage/logs/locomotive.log', 0, Logger::DEBUG);
         $rotatingFileHandler->setFormatter(new LineFormatter($rotatingFileFormat));
 
-        $this->logger = new Logger('loco');
+        $syslogFormat = new LineFormatter('%level_name%: %message%');
+        $syslogHandler = new SyslogHandler('Locomotive', 'local6', Logger::WARNING);
+        $syslogHandler->setFormatter($syslogFormat);
+
+        $this->logger = new Logger('locomotive');
         $this->logger->pushHandler($stdoutHandler);
         $this->logger->pushHandler($rotatingFileHandler);
+        $this->logger->pushHandler($syslogHandler);
     }
 
 

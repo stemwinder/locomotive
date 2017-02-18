@@ -176,7 +176,7 @@ class Configurator
     }
 
     /**
-     * Overides the speed limit based on scheduled values in the config file.
+     * Overrides the speed limit based on scheduled values in the config file.
      *
      * @return Configurator
      **/

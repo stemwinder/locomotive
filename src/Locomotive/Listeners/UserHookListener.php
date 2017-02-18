@@ -32,6 +32,11 @@ class UserHookListener extends AbstractListener
     protected $logger;
 
     /**
+     * @var array
+     */
+    protected $processors;
+
+    /**
      * UserHookListener constructor.
      *
      * @param array $config Locomotive config options
@@ -41,6 +46,11 @@ class UserHookListener extends AbstractListener
     {
         $this->config = $config;
         $this->logger = $logger;
+        $this->processors = null;
+
+        if (count($config['post-processors']) > 0) {
+            $this->processors = $config['post-processors'];
+        }
     }
 
     /**
@@ -49,8 +59,17 @@ class UserHookListener extends AbstractListener
      */
     public function handle(EventInterface $event, $param = null)
     {
-        print_r($this->config);
-        print_r($param);
+        if (null !== $this->processors) {
+            foreach ($this->processors as $processor) {
+                exec("nohup $processor \"$param\" > /dev/null 2>&1 & echo $!", $output, $exitCode);
+
+                if ($exitCode != 0) {
+                    $this->logger->warning('User script error: ' . implode(' ', $output));
+                } else {
+                    $this->logger->debug("Executed user script: [$output[0]] `$processor \"$param\"`");
+                }
+            }
+        }
     }
 
 }

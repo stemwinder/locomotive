@@ -251,11 +251,14 @@ class Locomote extends Command
         $this->logger->pushHandler($rotatingFileHandler);
     }
 
+
+    /**
+     * Setup emitter listeners
+     *
+     * @param array $config Locomotive config options
+     */
     private function setupEvents(array $config)
     {
         $this->emitter->addListener('event.itemMoved', new UserHookListener($config, $this->logger));
-
-        /* TESTING */
-        $this->emitter->emit('event.itemMoved', 'TEST');
     }
 }

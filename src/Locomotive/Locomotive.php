@@ -176,7 +176,7 @@ class Locomotive
         $metrics->last_run = $now->toDateTimeString();
         $metrics->save();
 
-        $this->runId = uniqid();
+        $this->runId = uniqid('', true);
         $this->mappedQueue = new Collection;
         $this->movedItems = new Collection;
 

@@ -57,8 +57,8 @@ class Configurator
      * It could be further decouples by transfering duties from the contructor
      * elsewhere, and passing in YAML file locations (and making use of FileLoader)
      *
-     * @param InputInterface  $input  An Input instance
-     * @param Logger          $logger A Monolog instance
+     * @param InputInterface $input An Input instance
+     * @param Logger $logger A Monolog instance
      */
     public function __construct(InputInterface $input, Logger $logger)
     {
@@ -74,12 +74,14 @@ class Configurator
      * Loads default config from an expected location.
      *
      * @return Configurator
+     *
+     * @throws \Symfony\Component\Yaml\Exception\ParseException
      **/
     private function loadDefaultConfiguration()
     {
         $defaultConfigFile = BASEPATH . '/app/default-config.yml';
 
-        if (! file_exists($defaultConfigFile)) {
+        if (!file_exists($defaultConfigFile)) {
             $this->logger->error('Default YAML config file not found at: ' . realpath($defaultConfigFile));
 
             exit(1);
@@ -95,6 +97,8 @@ class Configurator
      * Loads user config from root of app.
      *
      * @return Configurator
+     *
+     * @throws \Symfony\Component\Yaml\Exception\ParseException
      **/
     private function loadUserConfiguration()
     {
@@ -102,7 +106,7 @@ class Configurator
         $userConfigFile = BASEPATH . '/config.yml';
 
         if (file_exists($userHomeConfigFile)) {
-            $this->user = Yaml::parse(file_get_contents($userHomeConfigFile));
+            $this->user = Yaml::parse($userHomeConfigFile);
             $this->logger->debug('User YAML config loaded from: ' . $userHomeConfigFile);
         } elseif (file_exists($userConfigFile)) {
             $this->user = Yaml::parse(file_get_contents($userConfigFile));
@@ -118,14 +122,14 @@ class Configurator
     /**
      * Loads in options from CLI and filters out any that are set to `null`.
      *
-     * @param InputInterface  $input  An Input instance
-     * 
+     * @param InputInterface $input An Input instance
+     *
      * @return Configurator
      **/
     private function loadCliConfiguration(InputInterface $input)
     {
-        $this->cli = array_filter($input->getOptions(), function($item, $key) {
-            if (! in_array($key, ['help', 'quiet', 'verbose', 'version', 'ansi', 'no-ansi', 'no-interaction'], true)) {
+        $this->cli = array_filter($input->getOptions(), function ($item, $key) {
+            if (!in_array($key, ['help', 'quiet', 'verbose', 'version', 'ansi', 'no-ansi', 'no-interaction'], true)) {
                 return $item !== null;
             }
         }, ARRAY_FILTER_USE_BOTH);
@@ -139,8 +143,8 @@ class Configurator
      * Validates and merges all expected sources of config variables, giving
      * precedence to user and CLI.
      *
-     * @param InputInterface  $input  An Input instance
-     * 
+     * @param InputInterface $input An Input instance
+     *
      * @return Configurator
      **/
     private function processConfigurationValues(InputInterface $input)
@@ -152,11 +156,11 @@ class Configurator
             if (
                 isset($values['remove-sources'])
                 && (
-                    ! array_key_exists('remove', $values['remove-sources'])
+                    !array_key_exists('remove', $values['remove-sources'])
                     || null === $values['remove-sources']['remove']
                 )
             ) {
-               $values['remove-sources']['remove'] = false;
+                $values['remove-sources']['remove'] = false;
             }
         }
         unset($values);
@@ -176,7 +180,7 @@ class Configurator
     }
 
     /**
-     * Overides the speed limit based on scheduled values in the config file.
+     * Overrides the speed limit based on scheduled values in the config file.
      *
      * @return Configurator
      **/

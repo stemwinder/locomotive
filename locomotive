@@ -4,24 +4,24 @@
 /**
  * Locomotive - A PHP command line app providing scheduled, aggressive, mirrored
  * file fetching using segmented and parallel transfers.
- * 
+ *
  * Copyright (c) 2015 Joshua Smith <josh@stemwinder.net>
- * 
+ *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
 
-if (! file_exists(__DIR__ . '/vendor/autoload.php')) {
+if (!file_exists(__DIR__ . '/vendor/autoload.php')) {
     die(
         "\n"
-        ."[ERROR] Locomotive depends on some external libraries and components.\n"
-        ."It seems that those dependencies aren't properly installed.\n\n"
-        ."Perhaps you forgot to execute 'php composer.phar install' before\n"
-        ."using Locomotive for the first time?\n\n"
-        ."This command requires that you have previously installed Composer.\n"
-        ."To do so, execute the following command:\n\n"
-        ." $ curl -s http://getcomposer.org/installer | php"
-        ."\n\n"
+        . "[ERROR] Locomotive depends on some external libraries and components.\n"
+        . "It seems that those dependencies aren't properly installed.\n\n"
+        . "Perhaps you forgot to execute 'php composer.phar install' before\n"
+        . "using Locomotive for the first time?\n\n"
+        . "This command requires that you have previously installed Composer.\n"
+        . "To do so, execute the following command:\n\n"
+        . " $ curl -s http://getcomposer.org/installer | php"
+        . "\n\n"
     );
 }
 

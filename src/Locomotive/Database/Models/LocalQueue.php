@@ -19,59 +19,59 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class LocalQueue extends Model
 {
-	use SoftDeletes;
+    use SoftDeletes;
 
-	protected $guarded = ['id'];
-	protected $table = 'queue';
+    protected $guarded = ['id'];
+    protected $table = 'queue';
 
-	public function scopeLftpActive($query, $mappedKeys)
-	{
-		return $query->whereNotIn('id', $mappedKeys);
-	}
+    public function scopeLftpActive($query, $mappedKeys)
+    {
+        return $query->whereNotIn('id', $mappedKeys);
+    }
 
-	public function scopeFinished($query)
-	{
-		return $query->where('is_finished', true);
-	}
+    public function scopeFinished($query)
+    {
+        return $query->where('is_finished', true);
+    }
 
-	public function scopeNotFinished($query)
-	{
-		return $query->where('is_finished', false);
-	}
+    public function scopeNotFinished($query)
+    {
+        return $query->where('is_finished', false);
+    }
 
-	public function scopeMoved($query)
-	{
-		return $query->where('is_moved', true);
-	}
+    public function scopeMoved($query)
+    {
+        return $query->where('is_moved', true);
+    }
 
-	public function scopeNotMoved($query)
-	{
-		return $query->where('is_moved', false);
-	}
+    public function scopeNotMoved($query)
+    {
+        return $query->where('is_moved', false);
+    }
 
-	public function scopeFailed($query)
-	{
-		return $query->where('is_failed', true);
-	}
+    public function scopeFailed($query)
+    {
+        return $query->where('is_failed', true);
+    }
 
-	public function scopeNotFailed($query)
-	{
-		return $query->where('is_failed', false);
-	}
+    public function scopeNotFailed($query)
+    {
+        return $query->where('is_failed', false);
+    }
 
-	public function scopeForRun($query, $runId)
-	{
-		return $query->where('run_id', $runId);
-	}
+    public function scopeForRun($query, $runId)
+    {
+        return $query->where('run_id', $runId);
+    }
 
-	public function scopeNotForRun($query, $runId)
-	{
-		return $query->where('run_id', '!=', $runId);
-	}
+    public function scopeNotForRun($query, $runId)
+    {
+        return $query->where('run_id', '!=', $runId);
+    }
 
-	public function scopeCanBeRetried($query, $limit)
-	{
-		return $query->failed()
-					 ->where('retries', '<', $limit);
-	}
+    public function scopeCanBeRetried($query, $limit)
+    {
+        return $query->failed()
+                     ->where('retries', '<', $limit);
+    }
 }

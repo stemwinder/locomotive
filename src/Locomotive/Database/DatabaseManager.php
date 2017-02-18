@@ -56,7 +56,7 @@ class DatabaseManager
      * Manages all maintenance, migrations, and connection duties for the database.
      *
      * @param OutputInterface $output An Output instance
-     * @param Logger          $logger Console Logger
+     * @param Logger $logger Console Logger
      */
     public function __construct(OutputInterface $output, Logger $logger)
     {
@@ -76,8 +76,8 @@ class DatabaseManager
         // Boot Eloquent and return Capsule/Manager instance for injection
         $this->capsule = new Capsule;
         $this->capsule->addConnection([
-            'driver'    => 'sqlite',
-            'database'  => BASEPATH . '/app/storage/locomotive.sqlite',
+            'driver' => 'sqlite',
+            'database' => BASEPATH . '/app/storage/locomotive.sqlite',
         ]);
         $this->capsule->setAsGlobal();
         $this->capsule->bootEloquent();
@@ -108,7 +108,7 @@ class DatabaseManager
         $this->logger->debug('Beginning database maintenance.');
 
         // Check if database exists. If not, run migrations.
-        if (! $this->dbDoesExist()) {
+        if (!$this->dbDoesExist()) {
             $this->logger->debug('No database found. Attempting to migrate.');
 
             $this->phinxCall('migrate');
@@ -132,7 +132,7 @@ class DatabaseManager
         } else {
             $this->logger->debug('Database schema is at most current version.');
         }
-        
+
         $this->logger->debug('Database maintenance completed.');
 
         return $this;
@@ -163,7 +163,7 @@ class DatabaseManager
      */
     private function phinxCall($command)
     {
-        if (! isset($this->phinx)) {
+        if (!isset($this->phinx)) {
             $this->bootPhinx();
         }
 
@@ -171,7 +171,7 @@ class DatabaseManager
         $builtCommand = 'get' . ucfirst($command);
         $commandResult = $this->phinx->$builtCommand();
 
-        if ($this->phinx->getExitCode() != 0) {
+        if ((int)$this->phinx->getExitCode() !== 0) {
             $this->logger->error('There was a problem with database maintenance.');
 
             exit(1);
@@ -199,16 +199,18 @@ class DatabaseManager
     private function getCurrentMigration()
     {
         $matches = array();
-        $databaseStatus = preg_match("/\\d{14}/um", $this->phinxCall('status'), $matches);
+        preg_match("/\\d{14}/um", $this->phinxCall('status'), $matches);
         $currentMigration = $matches[0];
 
-        return (int) $currentMigration;
+        return (int)$currentMigration;
     }
 
     /**
      * Gets the latest migration version available in the migrations directory,=.
      *
      * @return int The latest migration version
+     *
+     * @throws \InvalidArgumentException
      **/
     private function getLatestMigration()
     {
@@ -223,11 +225,13 @@ class DatabaseManager
 
         $latestMigrationFileName = last(iterator_to_array($finder))->getRelativePathName();
 
-        return (int) strtok($latestMigrationFileName, '_');
+        return (int)strtok($latestMigrationFileName, '_');
     }
 
     /**
      * Set the database file path and name.
+     *
+     * @param string $database Location of the SQLite DB file
      *
      * @return DatabaseManager
      **/
@@ -241,7 +245,7 @@ class DatabaseManager
     /**
      * Gets the database file path and name.
      *
-     * @return DatabaseManager
+     * @return string
      **/
     public function getDatabase()
     {

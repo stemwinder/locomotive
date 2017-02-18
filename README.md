@@ -26,13 +26,13 @@ running **Locomotive**:
   * `app/storage`
   * `app/storage/logs`
   * `app/storage/working`
-5. Ensure **Locomotive** can be executed: `$ chmod 755 locomotive`
+5. Ensure **Locomotive** can be executed: `$ chmod u+x locomotive`
 6. Get some information about **Locomotive**: `$ ./locomotive -h`
 
 Configuration
 -------------
 
-Many options can be passed at the command line, but there are several that must
+Many options can be passed at the command line, but there are several that **must**
 be set in a config file. Any options issued at the CLI take precedence over
 config file settings.
 
@@ -46,6 +46,33 @@ locations, ordered by precedence:
 Storing the **Locomotive** config file at `~/.locomotive` is ideal, as it will
 be preserved through any upgrades or re-installations. Simply copy the default
 config file and customize as needed.
+
+### Config File Options
+
+* **lftp-path** - Absolute path to Lftp.
+* **private-keyfile** - Absolute path to your private key file that may be used for SSH connections to the host.
+* **public-keyfile** - Absolute path to your public key file that may be used for SSH connections to the host.
+* **username** - Username used to establish SSH connections to the host.
+* **password** - Password used to establish SSH connections to the host (not necessary if key files are provided).
+* **working-dir** - Absolute path to a custom working directory (overrides default location).
+* **speed-limit** - Global speed limit for transfers in bytes (default is *unlimited*).
+* **connection-limit** - Per-item transfer connection limit (default is *25*).
+* **transfer-limit** - Global concurrent item transfer limit (defaults to *5*).
+* **max-retries** - Maximum retry attempts for a failed or interrupted transfer.
+* **newer-than** - A date/time cutoff expressed as a string that can be parsed by [`strtotime()`](http://php.net/manual/en/function.strtotime.php).
+* **zip-sources** - `true` or `false`; If set to `true`, items from multiple sources will be "zipped" together in alternating fashion to prevent any source(s) from claiming priority of `transfer-limit`.
+* **remove-sources**
+  * **remove** - `true` or `false`; If set to `true`, items will be removed from the host source after succesfully completing.
+  * **exclude** - Any source paths to be excluded from removal expressed as a [YAML Sequence Collection](https://symfony.com/doc/current/components/yaml/yaml_format.html#collections).
+* **speed-schedule** - The global speed limits may be scheduled for hours of the day by providing a [YAML Mapping Collection](https://symfony.com/doc/current/components/yaml/yaml_format.html#collections).
+  * You may specify as many mappings as you want.
+  * The times must be expressed in a format that can be parsed by [`strtotime()`](http://php.net/manual/en/function.strtotime.php).
+  * The speed limit should be expressed in bytes.
+  * Example: `"03:00-06:00": 51200`
+* **source-target-map** - Although the source and target may be provided as command line arguments, multiple source/target relationships should be specified here as [YAML Mapping Collections](https://symfony.com/doc/current/components/yaml/yaml_format.html#collections).
+  * Example: `"/absolute/path/to/source": "/absolute/path/to/target"`
+* **post-processors** - If post-processing scripts are provided, they will be called in the order they are listed here with a single argument: the absolute path to the finsihed, moved item. Scripts should be expressed as a [YAML Sequence Collection](https://symfony.com/doc/current/components/yaml/yaml_format.html#collections).
+  * Example: `- "/usr/local/bin/unrarall"` will be called as `/usr/local/bin/unrarall /path/to/item`.
 
 **Locomotive** uses an intermediate location for working with the transfers it
 initiates. By default, the working directory is located at `app/storage/working`,

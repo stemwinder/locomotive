@@ -15,15 +15,22 @@
 namespace Locomotive\Command;
 
 use Bramus\Monolog\Formatter\ColoredLineFormatter;
+use Illuminate\Database\Capsule\Manager as Capsule;
+use League\Event\Emitter;
+use Locomotive\Configuration\Configurator;
+use Locomotive\Listeners\UserHookListener;
 use Monolog\Formatter\LineFormatter;
 use Monolog\Handler\RotatingFileHandler;
+use Monolog\Handler\SyslogHandler;
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Exception\InvalidArgumentException;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Filesystem\Exception\IOException;
 use Symfony\Component\Filesystem\LockHandler;
 use Locomotive\Database\DatabaseManager;
 use Locomotive\Locomotive;
@@ -34,6 +41,21 @@ class Locomote extends Command
      * @var Logger
      **/
     protected $logger;
+
+    /**
+     * @var Emitter
+     */
+    protected $emitter;
+
+    /**
+     * @var array
+     */
+    protected $config;
+
+    /**
+     * @var Capsule
+     */
+    protected $dbCapsule;
 
     /**
      * Sets command options and validates input.
@@ -53,12 +75,11 @@ class Locomote extends Command
                 InputArgument::OPTIONAL,
                 'The full path to the SOURCE directory. May also be a colon-delimited source list.'
             )
-             ->addArgument(
+            ->addArgument(
                 'target',
                 InputArgument::OPTIONAL,
                 'The full path to the TARGET directory. May also be a colon-delimited target list map.'
-            )
-        ;
+            );
 
         $this
             ->addOption(
@@ -120,25 +141,131 @@ class Locomote extends Command
                 'm',
                 InputOption::VALUE_REQUIRED,
                 'Maximum retry attempts for a failed or interrupted transfer'
-            )
-        ;
+            );
     }
 
     /**
      * Initial settings for the the command.
      *
-     * @param InputInterface  $input  An Input instance
+     * @param InputInterface $input An Input instance
      * @param OutputInterface $output An Output instance
+     *
+     * @throws \Exception
      **/
     protected function initialize(InputInterface $input, OutputInterface $output)
     {
+        $this->setupLogging($input);
+
+        // load and merge default and user config values with CLI input
+        $config = new Configurator($input, $this->logger);
+        $this->config = $config->getConfig();
+
+        // instantiate event emitter
+        $this->emitter = new Emitter;
+        $this->setupEvents($this->config);
+
+        // setup database connection and perform any necessary maintenance
+        $dbm = new DatabaseManager($output, $this->logger);
+        $dbm->doMaintenance()
+            ->connect();
+        $this->dbCapsule = $dbm->getConnection();
+    }
+
+    /**
+     * Executes the command.
+     *
+     * @param InputInterface $input An Input instance
+     * @param OutputInterface $output An Output instance
+     *
+     * @return mixed
+     *
+     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
+     * @throws IOException
+     **/
+    protected function execute(InputInterface $input, OutputInterface $output)
+    {
+        // creating a unique lock id to enable running Locomotive as multiple,
+        // concurrent instances.
+        $lockid = md5(serialize([$input->getArguments(), $input->getOptions()]));
+
+        // create a lock
+        $lock = new LockHandler("locomotive-$lockid");
+        if (!$lock->lock()) {
+            $this->logger->notice('Locomotive is already running with these arguments in another process.');
+
+            return 0;
+        }
+
+        // instantiate Locomotive
+        $locomotive = new Locomotive(
+            $input,
+            $output,
+            $this->config,
+            $this->logger,
+            $this->emitter,
+            $this->dbCapsule
+        );
+
+        // initial probing for general lftp state
+        $lftpQueue = $locomotive->getLftpStatus();
+
+        if ($locomotive->isLftpBackgrounded) {
+            // parse the lftp queue and set $locomotive class variables
+            // for lftp queued items and available slots
+            $locomotive->parseLftpQueue($lftpQueue);
+        }
+
+        // run Locomotive queue updates, transfers, and file handling
+        $locomotive->setLimits()
+                   ->updateLocalQueue()
+                   ->initiateTransfers()
+                   ->moveFinished()
+                   ->removeSourceFiles();
+
+        // write main status to output: new transfers
+        if ($locomotive->newTransfers) {
+            $thisLogger = &$this->logger;
+            $locomotive->newTransfers->each(function ($item) use ($thisLogger) {
+                $thisLogger->info('New transfer started: ' . $item->getBasename());
+            });
+        } else {
+            $this->logger->info('Locomotive did not start any new transfers.');
+        }
+
+        // write main status to output: moved items
+        if ($locomotive->movedItems->count() > 0) {
+            $thisLogger = &$this->logger;
+            $locomotive->movedItems->each(function ($item) use ($thisLogger) {
+                $thisLogger->info('Finished item moved: ' . $item->name);
+            });
+        } else {
+            $this->logger->info('Locomotive did not move any transfered items.');
+        }
+
+        // manually releasing lock
+        $lock->release();
+    }
+
+
+    /**
+     * Configure and instantiate logging.
+     *
+     * @param InputInterface $input An Input instance
+     *
+     * @return void
+     *
+     * @throws \Exception
+     */
+    private function setupLogging(InputInterface $input)
+    {
         if ($input->hasParameterOption('-vvv')) {
             $consoleLogLevel = Logger::DEBUG;
-        } else if ($input->hasParameterOption('-vv')) {
+        } elseif ($input->hasParameterOption('-vv')) {
             $consoleLogLevel = Logger::INFO;
-        } else if ($input->hasParameterOption('-v')) {
+        } elseif ($input->hasParameterOption('-v')) {
             $consoleLogLevel = Logger::NOTICE;
-        } else if ($input->hasParameterOption('-q')) {
+        } elseif ($input->hasParameterOption('-q')) {
             $consoleLogLevel = Logger::EMERGENCY;
         } else {
             $consoleLogLevel = Logger::ERROR;
@@ -152,85 +279,24 @@ class Locomote extends Command
         $rotatingFileHandler = new RotatingFileHandler(BASEPATH . '/app/storage/logs/locomotive.log', 0, Logger::DEBUG);
         $rotatingFileHandler->setFormatter(new LineFormatter($rotatingFileFormat));
 
-        $this->logger = new Logger('loco');
+        $syslogFormat = new LineFormatter('%level_name%: %message%');
+        $syslogHandler = new SyslogHandler('Locomotive', 'local6', Logger::WARNING);
+        $syslogHandler->setFormatter($syslogFormat);
+
+        $this->logger = new Logger('locomotive');
         $this->logger->pushHandler($stdoutHandler);
         $this->logger->pushHandler($rotatingFileHandler);
+        $this->logger->pushHandler($syslogHandler);
     }
 
+
     /**
-     * Executes the command.
+     * Setup emitter listeners
      *
-     * @param InputInterface  $input  An Input instance
-     * @param OutputInterface $output An Output instance
-     *
-     * @return void
-     **/
-    protected function execute(InputInterface $input, OutputInterface $output)
+     * @param array $config Locomotive config options
+     */
+    private function setupEvents(array $config)
     {
-        // creating a unique lock id to enable running Locomotive as multiple,
-        // concurrent instances.
-        $lockid = md5(
-            serialize([
-                $input->getArguments(),
-                $input->getOptions(),
-            ]
-        ));
-
-        // create a lock
-        $lock = new LockHandler("locomotive-$lockid");
-        if (! $lock->lock()) {
-            $this->logger->notice('Locomotive is already running with these arguments in another process.');
-
-            return 0;
-        }
-
-        // setup database connection and perform any necessary maintenance
-        $DBM = new DatabaseManager($output, $this->logger);
-        $DBM->doMaintenance()
-            ->connect();
-        $DB = $DBM->getConnection();
-
-        // instantiate Locomotive
-        $locomotive = new Locomotive($input, $output, $this->logger, $DB);
-
-        // initial probing for general lftp state
-        $lftpQueue = $locomotive->getLftpStatus();
-
-        if ($locomotive->isLftpBackgrounded) {
-            // parse the lftp queue and set $locomotive class variables
-            // for lftp queued items and available slots
-            $locomotive->parseLftpQueue($lftpQueue);
-        }
-
-        // run Locomotive queue updates, transfers, and file handling
-        $locomotive
-            ->setLimits()
-            ->updateLocalQueue()
-            ->initiateTransfers()
-            ->moveFinished()
-            ->removeSourceFiles();
-        
-        // write main status to output: new transfers
-        if ($locomotive->newTransfers) {
-            $thisLogger = &$this->logger;
-            $locomotive->newTransfers->each(function($item) use ($thisLogger) {
-                $thisLogger->info('New transfer started: ' . $item->getBasename());
-            });
-        } else {
-            $this->logger->info('Locomotive did not start any new transfers.');
-        }
-
-        // write main status to output: moved items
-        if ($locomotive->movedItems->count() > 0) {
-            $thisLogger = &$this->logger;
-            $locomotive->movedItems->each(function($item) use ($thisLogger) {
-                $thisLogger->info('Finished item moved: ' . $item->name);
-            });
-        } else {
-            $this->logger->info('Locomotive did not move any transfered items.');
-        }
-
-        // manually releasing lock
-        $lock->release();
+        $this->emitter->addListener('event.itemMoved', new UserHookListener($config, $this->logger));
     }
 }

@@ -26,7 +26,7 @@ class BaseApplication extends Application
      *
      * Initialize the Locomotive console application.
      *
-     * @param string $name    The Application Name
+     * @param string $name The Application Name
      * @param string $version The Application Version
      */
     public function __construct($name = 'Locomotive', $version = '1.1.0')
@@ -34,7 +34,7 @@ class BaseApplication extends Application
         // setting script execution time to unlimited just to be safe. This should
         // default to unlimited for PHP CLI on most systems, though.
         set_time_limit(0);
-        
+
         parent::__construct($name, $version);
     }
 
@@ -43,7 +43,7 @@ class BaseApplication extends Application
      *
      * @param InputInterface $input An Input instance
      * @param OutputInterface $output An Output instance
-     * 
+     *
      * @return integer 0 if everything went fine, or an error code
      */
     public function doRun(InputInterface $input, OutputInterface $output)
@@ -75,6 +75,8 @@ class BaseApplication extends Application
      * Gets the default commands that should always be available.
      *
      * @return array An array of default Command instances
+     *
+     * @throws \Symfony\Component\Console\Exception\LogicException
      */
     protected function getDefaultCommands()
     {

@@ -23,6 +23,7 @@ class LocomoteConfiguration implements ConfigurationInterface
      * Defines configuration options for the `locomote` default command.
      *
      * @return TreeBuilder
+     *
      * @throws \RuntimeException
      **/
     public function getConfigTreeBuilder()
@@ -89,7 +90,7 @@ class LocomoteConfiguration implements ConfigurationInterface
                     ->performNoDeepMerging()
                     ->prototype('scalar')->end()
                 ->end()
-                 ->arrayNode('source-target-map')
+                ->arrayNode('source-target-map')
                     ->useAttributeAsKey(true)
                     ->normalizeKeys(false)
                     ->performNoDeepMerging()
@@ -99,8 +100,52 @@ class LocomoteConfiguration implements ConfigurationInterface
                     ->performNoDeepMerging()
                     ->prototype('scalar')->end()
                 ->end()
+
+                ->append($this->addNotificationsNode())
+
             ->end();
 
         return $treeBuilder;
+    }
+
+    public function addNotificationsNode()
+    {
+        $treeBuilder = new TreeBuilder();
+        $node = $treeBuilder->root('notifications');
+
+        $node
+            ->performNoDeepMerging()
+            ->children()
+
+                ->arrayNode('prowl')
+                    ->treatFalseLike(array('enabled' => false))
+                    ->treatTrueLike(array('enabled' => true))
+                    ->treatNullLike(array('enabled' => false))
+                    ->normalizeKeys(false)
+                    ->children()
+
+                        ->booleanNode('enable')
+                            ->defaultFalse()
+                        ->end()
+
+                        ->scalarNode('api-key')
+                            ->isRequired()
+                        ->end()
+
+                        ->arrayNode('events')
+                            ->performNoDeepMerging()
+                            ->prototype('scalar')
+                            ->validate()
+                            ->ifNotInArray(array('transferStarted', 'itemMoved'))
+                                ->thenInvalid('%s')
+                            ->end()
+                        ->end()
+
+                    ->end()
+                ->end()
+
+            ->end();
+
+        return $node;
     }
 }

@@ -59,6 +59,8 @@ class Configurator
      *
      * @param InputInterface $input An Input instance
      * @param Logger $logger A Monolog instance
+     *
+     * @throws \Symfony\Component\Yaml\Exception\ParseException
      */
     public function __construct(InputInterface $input, Logger $logger)
     {

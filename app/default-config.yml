@@ -16,3 +16,8 @@ remove-sources:
 speed-schedule:
 source-target-map:
 post-processors:
+notifications:
+  prowl:
+    enable: false
+    api-key:
+    events: [tranferStarted, itemMoved]

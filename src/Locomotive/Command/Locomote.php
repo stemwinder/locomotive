@@ -18,6 +18,7 @@ use Bramus\Monolog\Formatter\ColoredLineFormatter;
 use Illuminate\Database\Capsule\Manager as Capsule;
 use League\Event\Emitter;
 use Locomotive\Configuration\Configurator;
+use Locomotive\Listeners\Notifications\ProwlListener;
 use Locomotive\Listeners\UserHookListener;
 use Monolog\Formatter\LineFormatter;
 use Monolog\Handler\RotatingFileHandler;
@@ -25,7 +26,6 @@ use Monolog\Handler\SyslogHandler;
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Exception\InvalidArgumentException;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -156,9 +156,14 @@ class Locomote extends Command
     {
         $this->setupLogging($input);
 
-        // load and merge default and user config values with CLI input
-        $config = new Configurator($input, $this->logger);
-        $this->config = $config->getConfig();
+        try {
+            // load and merge default and user config values with CLI input
+            $config = new Configurator($input, $this->logger);
+            $this->config = $config->getConfig();
+        } catch (\Exception $e) {
+            $this->logger->error($e->getMessage());
+            exit(0);
+        }
 
         // instantiate event emitter
         $this->emitter = new Emitter;
@@ -179,8 +184,8 @@ class Locomote extends Command
      *
      * @return mixed
      *
+     * @throws \Symfony\Component\Console\Exception\InvalidArgumentException
      * @throws \InvalidArgumentException
-     * @throws InvalidArgumentException
      * @throws IOException
      **/
     protected function execute(InputInterface $input, OutputInterface $output)
@@ -298,5 +303,11 @@ class Locomote extends Command
     private function setupEvents(array $config)
     {
         $this->emitter->addListener('event.itemMoved', new UserHookListener($config, $this->logger));
+
+        if ($config['notifications']['prowl']['enable'] === true) {
+            foreach ($config['notifications']['prowl']['events'] as $event) {
+                $this->emitter->addListener("event.$event", new ProwlListener($config, $this->logger));
+            }
+        }
     }
 }

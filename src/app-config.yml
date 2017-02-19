@@ -1,0 +1,4 @@
+language:
+  events:
+    transferStarted: "New Transfer"
+    itemMoved: "Transfer Complete"

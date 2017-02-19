@@ -19,5 +19,8 @@ post-processors:
 notifications:
   prowl:
     enable: false
+    events: [transferStarted, itemMoved]
     api-key:
-    events: [tranferStarted, itemMoved]
+  pushover:
+    enable: false
+    events: [transferStarted, itemMoved]

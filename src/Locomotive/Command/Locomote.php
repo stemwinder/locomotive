@@ -18,8 +18,7 @@ use Bramus\Monolog\Formatter\ColoredLineFormatter;
 use Illuminate\Database\Capsule\Manager as Capsule;
 use League\Event\Emitter;
 use Locomotive\Configuration\Configurator;
-use Locomotive\Listeners\Notifications\ProwlListener;
-use Locomotive\Listeners\UserHookListener;
+use Locomotive\Listeners\ListenerManager;
 use Monolog\Formatter\LineFormatter;
 use Monolog\Handler\RotatingFileHandler;
 use Monolog\Handler\SyslogHandler;
@@ -37,6 +36,7 @@ use Locomotive\Locomotive;
 
 class Locomote extends Command
 {
+
     /**
      * @var Logger
      **/
@@ -167,7 +167,7 @@ class Locomote extends Command
 
         // instantiate event emitter
         $this->emitter = new Emitter;
-        $this->setupEvents($this->config);
+        ListenerManager::setup($this->emitter, $this->config, $this->logger);
 
         // setup database connection and perform any necessary maintenance
         $dbm = new DatabaseManager($output, $this->logger);
@@ -250,6 +250,8 @@ class Locomote extends Command
 
         // manually releasing lock
         $lock->release();
+
+        return true;
     }
 
 
@@ -294,20 +296,4 @@ class Locomote extends Command
         $this->logger->pushHandler($syslogHandler);
     }
 
-
-    /**
-     * Setup emitter listeners
-     *
-     * @param array $config Locomotive config options
-     */
-    private function setupEvents(array $config)
-    {
-        $this->emitter->addListener('event.itemMoved', new UserHookListener($config, $this->logger));
-
-        if ($config['notifications']['prowl']['enable'] === true) {
-            foreach ($config['notifications']['prowl']['events'] as $event) {
-                $this->emitter->addListener("event.$event", new ProwlListener($config, $this->logger));
-            }
-        }
-    }
 }

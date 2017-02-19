@@ -19,7 +19,6 @@ use GuzzleHttp\Exception\RequestException;
 use League\Event\AbstractListener;
 use League\Event\EventInterface;
 use Monolog\Logger;
-use Psr\Http\Message\ResponseInterface;
 
 class ProwlListener extends AbstractListener
 {
@@ -60,19 +59,13 @@ class ProwlListener extends AbstractListener
     {
         $logger = $this->logger;
         $prowlConfig = $this->config['notifications']['prowl'];
-
-        if ($event->getName() === 'event.transferStarted') {
-            $eventName = 'New Transfer';
-        } elseif ($event->getName() === 'event.itemMoved') {
-            $eventName = 'Transfer Finished';
-        }
+        $eventName = $this->config['app']['language']['events'][explode('.', $event->getName())[1]];
 
         try {
             $client = new Client(['base_uri' => $this->endpoint]);
             $client->post($this->endpoint, [
                 'form_params' => [
                     'apikey' => $prowlConfig['api-key'],
-                    'providerkey' => 'a113382daeb1b8950a7b112e99a26c2d23ef4fff',
                     'application' => 'Locomotive',
                     'event' => $eventName,
                     'description' => $param

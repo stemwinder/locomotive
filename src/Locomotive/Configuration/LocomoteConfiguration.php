@@ -62,7 +62,6 @@ class LocomoteConfiguration implements ConfigurationInterface
                 ->scalarNode('newer-than')->end()
                 ->booleanNode('zip-sources')
                     ->isRequired()
-                    ->cannotBeEmpty()
                     ->defaultFalse()
                 ->end()
                 ->arrayNode('remove-sources')
@@ -71,7 +70,6 @@ class LocomoteConfiguration implements ConfigurationInterface
                     ->children()
                         ->booleanNode('remove')
                             ->isRequired()
-                            ->cannotBeEmpty()
                             ->defaultFalse()
                             ->validate()
                                 ->ifNull()
@@ -115,12 +113,14 @@ class LocomoteConfiguration implements ConfigurationInterface
 
         $node
             ->performNoDeepMerging()
+            ->normalizeKeys(false)
             ->children()
 
+                // Prowl
                 ->arrayNode('prowl')
-                    ->treatFalseLike(array('enabled' => false))
-                    ->treatTrueLike(array('enabled' => true))
-                    ->treatNullLike(array('enabled' => false))
+                    ->treatFalseLike(['enable' => false])
+                    ->treatTrueLike(['enable' => false])
+                    ->treatNullLike(['enable' => false])
                     ->normalizeKeys(false)
                     ->children()
 
@@ -128,16 +128,42 @@ class LocomoteConfiguration implements ConfigurationInterface
                             ->defaultFalse()
                         ->end()
 
+                        ->arrayNode('events')
+                            ->performNoDeepMerging()
+                            ->prototype('scalar')
+                                ->validate()
+                                ->ifNotInArray(['transferStarted', 'itemMoved'])
+                                ->thenInvalid('%s')
+                            ->end()
+                            ->end()
+                        ->end()
+
                         ->scalarNode('api-key')
-                            ->isRequired()
+                            ->cannotBeEmpty()
+                        ->end()
+
+                    ->end()
+                ->end()
+
+                // Pushover
+                ->arrayNode('pushover')
+                    ->treatFalseLike(['enable' => false])
+                    ->treatTrueLike(['enable' => false])
+                    ->treatNullLike(['enable' => false])
+                    ->normalizeKeys(false)
+                    ->children()
+
+                        ->booleanNode('enable')
+                            ->defaultFalse()
                         ->end()
 
                         ->arrayNode('events')
                             ->performNoDeepMerging()
                             ->prototype('scalar')
-                            ->validate()
-                            ->ifNotInArray(array('transferStarted', 'itemMoved'))
+                                ->validate()
+                                ->ifNotInArray(['transferStarted', 'itemMoved'])
                                 ->thenInvalid('%s')
+                            ->end()
                             ->end()
                         ->end()
 

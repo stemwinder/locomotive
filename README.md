@@ -2,6 +2,11 @@
 A PHP command line app providing scheduled, aggressive, mirrored file fetching
 using segmented and parallel transfers.
 
+**Locomotive** is intended to be run as a repeated, scheduled job (ie: crontab), and
+depends on successive runs to handle the moving of transfered items, LFTP queue monitoring,
+and other necessary tasks. The suggested run interval is *ten minutes*, but may be run more
+or less often depending on the user's needs.
+
 Requirements
 ------------
 
@@ -71,7 +76,7 @@ config file and customize as needed.
   * Example: `"03:00-06:00": 51200`
 * **source-target-map** - Although the source and target may be provided as command line arguments, multiple source/target relationships should be specified here as [YAML Mapping Collections](https://symfony.com/doc/current/components/yaml/yaml_format.html#collections).
   * Example: `"/absolute/path/to/source": "/absolute/path/to/target"`
-* **post-processors** - If post-processing scripts are provided, they will be called in the order they are listed here with a single argument: the absolute path to the finsihed, moved item. Scripts should be expressed as a [YAML Sequence Collection](https://symfony.com/doc/current/components/yaml/yaml_format.html#collections).
+* **post-processors** - If post-processing scripts are provided, they will be called in the order they are listed here with a single argument: the absolute path to the finished, moved item. Scripts should be expressed as a [YAML Sequence Collection](https://symfony.com/doc/current/components/yaml/yaml_format.html#collections).
   * Example: `- "/usr/local/bin/unrarall"` will be called as `/usr/local/bin/unrarall /path/to/item`.
 
 **Locomotive** uses an intermediate location for working with the transfers it

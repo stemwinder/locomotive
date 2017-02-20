@@ -494,7 +494,6 @@ class Locomotive
                         $item->save();
 
                         $this->logger->warning("The following transfer failed: $item->name");
-                        $this->emitter->emit('event.transferFailed', $item->name);
                     }
                 } else {
                     // mark item as failed if it can't be found locally
@@ -502,6 +501,12 @@ class Locomotive
                     $item->save();
 
                     $this->logger->warning("The following transfer failed: $item->name");
+                }
+
+                if ( // emit a failure event if we've reached the maximum number of retries
+                    (bool)$item->is_failed === true
+                    && (int)$item->retries === (int)$this->options['max-retries']
+                ) {
                     $this->emitter->emit('event.transferFailed', $item->name);
                 }
             });
@@ -544,7 +549,7 @@ class Locomotive
         $localQueue->started_at = date('Y-m-d H:i:s');
         $localQueue->target_dir = $target;
 
-        if ($localQueue->is_failed == true) {
+        if ((bool)$localQueue->is_failed === true) {
             $localQueue->is_failed = false;
             $localQueue->retries++;
         }

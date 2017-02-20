@@ -1,5 +1,12 @@
 # Locomotive Change Log
 
+<a name="1.4.0"></a>
+## 1.4.0
+- Adds support for notifications
+  - Prowl
+  - Pushover
+- Better exception and error handling
+
 <a name="1.3.0"></a>
 ## 1.3.0
 - Now supports custom post-processing user scripts

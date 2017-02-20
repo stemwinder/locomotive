@@ -48,6 +48,11 @@ class Configurator
     protected $config;
 
     /**
+     * @var array
+     */
+    protected $app;
+
+    /**
      * Class Constructor.
      *
      * Handles all expected configuration sources and merges them together while
@@ -59,6 +64,8 @@ class Configurator
      *
      * @param InputInterface $input An Input instance
      * @param Logger $logger A Monolog instance
+     *
+     * @throws \Symfony\Component\Yaml\Exception\ParseException
      */
     public function __construct(InputInterface $input, Logger $logger)
     {
@@ -67,7 +74,8 @@ class Configurator
         $this->loadDefaultConfiguration()
              ->loadUserConfiguration()
              ->loadCliConfiguration($input)
-             ->processConfigurationValues($input);
+             ->loadAppConfiguration()
+             ->processConfigurationValues();
     }
 
     /**
@@ -139,15 +147,29 @@ class Configurator
         return $this;
     }
 
+    private function loadAppConfiguration()
+    {
+        $appConfigFile = BASEPATH . '/src/app-config.yml';
+
+        if (file_exists($appConfigFile)) {
+            $this->app = Yaml::parse(file_get_contents($appConfigFile));
+            $this->logger->debug('App YAML config loaded from: ' . realpath($appConfigFile));
+        } else {
+            $this->logger->critical('App YAML config file not found at: ' . realpath($appConfigFile));
+
+            exit(1);
+        }
+
+        return $this;
+    }
+
     /**
      * Validates and merges all expected sources of config variables, giving
      * precedence to user and CLI.
      *
-     * @param InputInterface $input An Input instance
-     *
      * @return Configurator
      **/
-    private function processConfigurationValues(InputInterface $input)
+    private function processConfigurationValues()
     {
         $configs = array($this->defaults, $this->user, $this->cli);
 
@@ -173,6 +195,9 @@ class Configurator
         );
 
         $this->parseSpeedSchedule();
+
+        // merges the application config file
+        $this->config = array_merge($this->config, ['app' => $this->app]);
 
         $this->logger->debug('Configs validated, merged, and loaded successfully.');
 

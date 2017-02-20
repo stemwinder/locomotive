@@ -24,3 +24,5 @@ notifications:
   pushover:
     enable: false
     events: [transferStarted, transferComplete, transferFailed]
+    api-token:
+    user-key:

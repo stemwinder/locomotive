@@ -23,6 +23,7 @@ class LocomoteConfiguration implements ConfigurationInterface
      * Defines configuration options for the `locomote` default command.
      *
      * @return TreeBuilder
+     *
      * @throws \RuntimeException
      **/
     public function getConfigTreeBuilder()
@@ -61,7 +62,6 @@ class LocomoteConfiguration implements ConfigurationInterface
                 ->scalarNode('newer-than')->end()
                 ->booleanNode('zip-sources')
                     ->isRequired()
-                    ->cannotBeEmpty()
                     ->defaultFalse()
                 ->end()
                 ->arrayNode('remove-sources')
@@ -70,7 +70,6 @@ class LocomoteConfiguration implements ConfigurationInterface
                     ->children()
                         ->booleanNode('remove')
                             ->isRequired()
-                            ->cannotBeEmpty()
                             ->defaultFalse()
                             ->validate()
                                 ->ifNull()
@@ -89,7 +88,7 @@ class LocomoteConfiguration implements ConfigurationInterface
                     ->performNoDeepMerging()
                     ->prototype('scalar')->end()
                 ->end()
-                 ->arrayNode('source-target-map')
+                ->arrayNode('source-target-map')
                     ->useAttributeAsKey(true)
                     ->normalizeKeys(false)
                     ->performNoDeepMerging()
@@ -99,8 +98,77 @@ class LocomoteConfiguration implements ConfigurationInterface
                     ->performNoDeepMerging()
                     ->prototype('scalar')->end()
                 ->end()
+                ->append($this->addNotificationsNode())
             ->end();
 
         return $treeBuilder;
+    }
+
+    private function addNotificationsNode()
+    {
+        $treeBuilder = new TreeBuilder();
+        $node = $treeBuilder->root('notifications');
+
+        $node
+            ->performNoDeepMerging()
+            ->normalizeKeys(false)
+            ->children()
+
+                // Prowl
+                ->arrayNode('prowl')
+                    ->treatFalseLike(['enable' => false])
+                    ->treatTrueLike(['enable' => false])
+                    ->treatNullLike(['enable' => false])
+                    ->normalizeKeys(false)
+                    ->children()
+                        ->booleanNode('enable')
+                            ->defaultFalse()
+                        ->end()
+                        ->arrayNode('events')
+                            ->performNoDeepMerging()
+                            ->prototype('scalar')
+                                ->validate()
+                                    ->ifNotInArray(['transferStarted', 'transferComplete', 'transferFailed'])
+                                    ->thenInvalid('%s')
+                                ->end()
+                            ->end()
+                        ->end()
+                        ->scalarNode('api-key')
+                            ->isRequired()
+                        ->end()
+                    ->end()
+                ->end()
+
+                // Pushover
+                ->arrayNode('pushover')
+                    ->treatFalseLike(['enable' => false])
+                    ->treatTrueLike(['enable' => false])
+                    ->treatNullLike(['enable' => false])
+                    ->normalizeKeys(false)
+                    ->children()
+                        ->booleanNode('enable')
+                            ->defaultFalse()
+                        ->end()
+                        ->arrayNode('events')
+                            ->performNoDeepMerging()
+                            ->prototype('scalar')
+                                ->validate()
+                                    ->ifNotInArray(['transferStarted', 'transferComplete', 'transferFailed'])
+                                    ->thenInvalid('%s')
+                                ->end()
+                            ->end()
+                        ->end()
+                        ->scalarNode('api-token')
+                            ->isRequired()
+                        ->end()
+                        ->scalarNode('user-key')
+                            ->isRequired()
+                        ->end()
+                    ->end()
+                ->end()
+
+            ->end();
+
+        return $node;
     }
 }

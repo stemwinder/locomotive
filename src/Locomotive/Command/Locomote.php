@@ -18,14 +18,13 @@ use Bramus\Monolog\Formatter\ColoredLineFormatter;
 use Illuminate\Database\Capsule\Manager as Capsule;
 use League\Event\Emitter;
 use Locomotive\Configuration\Configurator;
-use Locomotive\Listeners\UserHookListener;
+use Locomotive\Listeners\ListenerManager;
 use Monolog\Formatter\LineFormatter;
 use Monolog\Handler\RotatingFileHandler;
 use Monolog\Handler\SyslogHandler;
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Exception\InvalidArgumentException;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -37,6 +36,7 @@ use Locomotive\Locomotive;
 
 class Locomote extends Command
 {
+
     /**
      * @var Logger
      **/
@@ -59,6 +59,8 @@ class Locomote extends Command
 
     /**
      * Sets command options and validates input.
+     *
+     * @throws \Symfony\Component\Console\Exception\InvalidArgumentException
      **/
     protected function configure()
     {
@@ -156,13 +158,18 @@ class Locomote extends Command
     {
         $this->setupLogging($input);
 
-        // load and merge default and user config values with CLI input
-        $config = new Configurator($input, $this->logger);
-        $this->config = $config->getConfig();
+        try {
+            // load and merge default and user config values with CLI input
+            $config = new Configurator($input, $this->logger);
+            $this->config = $config->getConfig();
+        } catch (\Exception $e) {
+            $this->logger->error($e->getMessage());
+            exit(0);
+        }
 
         // instantiate event emitter
         $this->emitter = new Emitter;
-        $this->setupEvents($this->config);
+        ListenerManager::setup($this->emitter, $this->config, $this->logger);
 
         // setup database connection and perform any necessary maintenance
         $dbm = new DatabaseManager($output, $this->logger);
@@ -179,8 +186,8 @@ class Locomote extends Command
      *
      * @return mixed
      *
+     * @throws \Symfony\Component\Console\Exception\InvalidArgumentException
      * @throws \InvalidArgumentException
-     * @throws InvalidArgumentException
      * @throws IOException
      **/
     protected function execute(InputInterface $input, OutputInterface $output)
@@ -206,6 +213,10 @@ class Locomote extends Command
             $this->emitter,
             $this->dbCapsule
         );
+        $locomotive->dependencyCheck()
+                   ->bootstrap()
+                   ->setPaths()
+                   ->validatePaths();
 
         // initial probing for general lftp state
         $lftpQueue = $locomotive->getLftpStatus();
@@ -245,6 +256,8 @@ class Locomote extends Command
 
         // manually releasing lock
         $lock->release();
+
+        return true;
     }
 
 
@@ -289,14 +302,4 @@ class Locomote extends Command
         $this->logger->pushHandler($syslogHandler);
     }
 
-
-    /**
-     * Setup emitter listeners
-     *
-     * @param array $config Locomotive config options
-     */
-    private function setupEvents(array $config)
-    {
-        $this->emitter->addListener('event.itemMoved', new UserHookListener($config, $this->logger));
-    }
 }

@@ -16,3 +16,13 @@ remove-sources:
 speed-schedule:
 source-target-map:
 post-processors:
+notifications:
+  prowl:
+    enable: false
+    events: [transferStarted, transferComplete, transferFailed]
+    api-key:
+  pushover:
+    enable: false
+    events: [transferStarted, transferComplete, transferFailed]
+    api-token:
+    user-key:

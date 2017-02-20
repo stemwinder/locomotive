@@ -494,6 +494,7 @@ class Locomotive
                         $item->save();
 
                         $this->logger->warning("The following transfer failed: $item->name");
+                        $this->emitter->emit('event.transferFailed', $item->name);
                     }
                 } else {
                     // mark item as failed if it can't be found locally
@@ -501,6 +502,7 @@ class Locomotive
                     $item->save();
 
                     $this->logger->warning("The following transfer failed: $item->name");
+                    $this->emitter->emit('event.transferFailed', $item->name);
                 }
             });
         }
@@ -542,7 +544,7 @@ class Locomotive
         $localQueue->started_at = date('Y-m-d H:i:s');
         $localQueue->target_dir = $target;
 
-        if ($localQueue->is_failed === 1) {
+        if ($localQueue->is_failed == true) {
             $localQueue->is_failed = false;
             $localQueue->retries++;
         }
@@ -699,8 +701,8 @@ class Locomotive
                         $item->is_moved = true;
                         $item->save();
 
-                        // emit `itemMoved` event
-                        $this->emitter->emit('event.itemMoved', $targetDir . $item->name);
+                        // emit `transferComplete` event
+                        $this->emitter->emit('event.transferComplete', $targetDir . $item->name);
                     } catch (IOException $e) {
                         $this->logger->error($e->getMessage());
                     }

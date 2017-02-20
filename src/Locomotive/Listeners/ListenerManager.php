@@ -31,7 +31,7 @@ class ListenerManager
     public static function setup(Emitter $emitter, array $config, Logger $logger)
     {
         // user post-process script(s) listener
-        $emitter->addListener('event.itemMoved', new UserHookListener($config, $logger));
+        $emitter->addListener('event.transferComplete', new UserHookListener($config, $logger));
 
         // gather all enabled notification services and bind configured event listeners
         $notificationServices = Collection::make($config['notifications'])->whereStrict('enable', true);

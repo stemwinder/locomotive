@@ -1,4 +1,4 @@
 language:
   events:
     transferStarted: "New Transfer"
-    itemMoved: "Transfer Complete"
+    transferComplete: "Transfer Complete"

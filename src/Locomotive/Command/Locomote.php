@@ -59,6 +59,8 @@ class Locomote extends Command
 
     /**
      * Sets command options and validates input.
+     *
+     * @throws \Symfony\Component\Console\Exception\InvalidArgumentException
      **/
     protected function configure()
     {
@@ -211,6 +213,10 @@ class Locomote extends Command
             $this->emitter,
             $this->dbCapsule
         );
+        $locomotive->dependencyCheck()
+                   ->bootstrap()
+                   ->setPaths()
+                   ->validatePaths();
 
         // initial probing for general lftp state
         $lftpQueue = $locomotive->getLftpStatus();

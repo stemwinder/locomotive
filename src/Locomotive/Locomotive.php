@@ -61,7 +61,7 @@ class Locomotive
     public $lftp;
 
     /**
-     * @var SSH2 Resource
+     * @var resource
      **/
     protected $sshSession;
 
@@ -91,7 +91,7 @@ class Locomotive
      *
      * @var Int
      **/
-    public $lftpTerminalId = null;
+    public $lftpTerminalId;
 
     /**
      * Current count of items in lftp queue.
@@ -161,22 +161,14 @@ class Locomotive
 
         // initial Locomotive setup, checks, and validation
         $this->arguments['host'] = $input->getArgument('host');
-
-        $this->dependencyCheck()
-             ->bootstrap($input, $logger)
-             ->setPaths()
-             ->validatePaths();
     }
 
     /**
      * Bootstrap Locomotive.
      *
-     * @param InputInterface $input An Input instance
-     * @param Logger $logger Monolog Logger
-     *
      * @return Locomotive
      **/
-    private function bootstrap(InputInterface $input, Logger $logger)
+    public function bootstrap()
     {
         // grab last run time and update it
         $now = Carbon::now();
@@ -199,7 +191,7 @@ class Locomotive
         // setting up lftp command builder
         $this->lftp = new Lftp(
             array_merge($this->arguments, $this->options),
-            $logger
+            $this->logger
         );
 
         // setup ssh/sftp session
@@ -213,14 +205,14 @@ class Locomotive
      *
      * @return mixed
      **/
-    private function dependencyCheck()
+    public function dependencyCheck()
     {
         // check for lFTP
         if (!`which lftp`) {
             $this->logger->critical(
                 "LFTP is either not installed on this system, or not in the path.\n"
                 . "Please provide the path in the Locomotive config or find out\n"
-                . "more about LFTP by visiting: https://github.com/lavv17/lftp"
+                . 'more about LFTP by visiting: https://github.com/lavv17/lftp'
             );
 
             return 0;
@@ -236,7 +228,7 @@ class Locomotive
      *
      * @throws \Symfony\Component\Console\Exception\InvalidArgumentException
      **/
-    private function setPaths()
+    public function setPaths()
     {
         // attempt to set source/target from config file if not provided at CLI
         if (!array_filter([
@@ -268,7 +260,7 @@ class Locomotive
      *
      * @return Locomotive
      **/
-    private function validatePaths()
+    public function validatePaths()
     {
         // validating list matching for source/target mapping purposes
         if (is_array($this->arguments['target']) && is_array($this->arguments['source'])) {
@@ -312,7 +304,7 @@ class Locomotive
     {
         if (is_array($this->arguments['target']) && is_array($this->arguments['source'])) {
             // get the key for the matching array source
-            $matchingSource = array_filter($this->arguments['source'], function ($source, $key) use ($sourceDir) {
+            $matchingSource = array_filter($this->arguments['source'], function ($source) use ($sourceDir) {
                 return str_contains($source, rtrim($sourceDir, '/'));
             }, ARRAY_FILTER_USE_BOTH);
 
@@ -327,7 +319,7 @@ class Locomotive
     /**
      * Gets the status of the lftp queue.
      *
-     * @return string The response from `lftp queue`
+     * @return array The response from `lftp queue`
      **/
     public function getLftpStatus()
     {
@@ -405,7 +397,7 @@ class Locomotive
         });
 
         // clean queued items
-        $queuedItems->transform(function ($item, $key) {
+        $queuedItems->transform(function ($item) {
             return ltrim($item);
         });
 
@@ -416,8 +408,8 @@ class Locomotive
         $localQueue = LocalQueue::notFinished()->get();
 
         // map lftp queue items to local DB queue items
-        $localQueue->each(function ($localItem, $key) use ($mergedLftpQueue) {
-            $mappedItem = $mergedLftpQueue->search(function ($aItem, $aKey) use ($localItem) {
+        $localQueue->each(function ($localItem) use ($mergedLftpQueue) {
+            $mappedItem = $mergedLftpQueue->search(function ($aItem) use ($localItem) {
                 return str_contains($aItem, $localItem->name);
             });
 
@@ -478,7 +470,7 @@ class Locomotive
         if ($localQueue->count() > 0) {
             $this->logger->debug('Unfinished items found in local queue. Checking for completeness.');
 
-            $localQueue->each(function ($item, $key) {
+            $localQueue->each(function ($item) {
                 // seeking to file location
                 $finderItem = new Finder();
                 $finderItem->in($this->options['working-dir'])
@@ -519,7 +511,7 @@ class Locomotive
     /**
      * Records a transfer in the local queue.
      *
-     * @param Finder $item The transfered item
+     * @param SplFileInfo $item The transfered item
      * @param string $transferPath The absolute transfer path
      *
      * @return LocalQueue The Eloquent model
@@ -550,7 +542,7 @@ class Locomotive
         $localQueue->started_at = date('Y-m-d H:i:s');
         $localQueue->target_dir = $target;
 
-        if ($localQueue->is_failed == true) {
+        if ($localQueue->is_failed === 1) {
             $localQueue->is_failed = false;
             $localQueue->retries++;
         }
@@ -693,7 +685,7 @@ class Locomotive
             $workingDir = $this->options['working-dir'];
             $fs = new Filesystem();
 
-            $finished->each(function ($item, $key) use ($workingDir, $fs) {
+            $finished->each(function ($item) use ($workingDir, $fs) {
                 // move item
                 $targetDir = rtrim($item->target_dir, '/') . '/';
 
@@ -760,7 +752,7 @@ class Locomotive
                 });
             }
 
-            $finished->each(function ($item, $key) use ($fs) {
+            $finished->each(function ($item) use ($fs) {
                 $sourceItemPath = rtrim($item->source_dir, '/') . '/' . $item->name;
                 $sourceStream = 'ssh2.sftp://' . (int)$this->sshSession . $sourceItemPath;
 
@@ -774,9 +766,7 @@ class Locomotive
                         $item->save();
 
                         $this->logger->info("The following item was removed from source: $sourceItemPath");
-                    } catch (Exception $e) {
-                        $this->logger->warning($e->getMessage());
-                    } catch (IOException $e) {
+                    } catch (\Exception $e) {
                         $this->logger->warning($e->getMessage());
                     } catch (IOExceptionInterface $e) {
                         $this->logger->warning($e->getMessage());
@@ -885,7 +875,7 @@ class Locomotive
             $seen = $seen->diff($retry);
         }
 
-        $items->transform(function (&$sourceItems, $sourceDir) use ($seen) {
+        $items->transform(function (&$sourceItems) use ($seen) {
             return $sourceItems->reject(function ($item) use ($seen) {
                 // filter out items seen in the local queue
                 return $seen->contains(
@@ -924,13 +914,13 @@ class Locomotive
         if ($this->options['zip-sources'] === true) {
             // zip all sources together in alternating fashion
             for ($i = 0; $i <= $slots; $i++) {
-                $items->each(function ($sourceListing, $sourceDir) use ($orderedItems) {
+                $items->each(function ($sourceListing) use ($orderedItems) {
                     $orderedItems->push($sourceListing->shift());
                 });
             }
         } else {
             // build `$orderedItems` list in FIFO order
-            $items->each(function ($sourceListing, $sourceDir) use ($orderedItems) {
+            $items->each(function ($sourceListing) use ($orderedItems) {
                 $sourceListing->each(function ($source) use ($orderedItems) {
                     $orderedItems->push($source);
                 });
@@ -951,6 +941,9 @@ class Locomotive
      **/
     private function calculateItemSize(SplFileInfo $item)
     {
+        $itemSize = 0;
+        $fileCount = 0;
+
         // file or dir specific data
         if ($item->isDir()) {
             $files = new Finder();
@@ -959,8 +952,6 @@ class Locomotive
             $files->in($item->getPath() . '/' . $item->getBasename());
 
             // calculate recursive sums
-            $itemSize = 0;
-            $fileCount = 0;
             foreach ($files as $file) {
                 if ($file->isFile()) {
                     $itemSize += $file->getSize();

@@ -98,15 +98,13 @@ class LocomoteConfiguration implements ConfigurationInterface
                     ->performNoDeepMerging()
                     ->prototype('scalar')->end()
                 ->end()
-
                 ->append($this->addNotificationsNode())
-
             ->end();
 
         return $treeBuilder;
     }
 
-    public function addNotificationsNode()
+    private function addNotificationsNode()
     {
         $treeBuilder = new TreeBuilder();
         $node = $treeBuilder->root('notifications');
@@ -123,11 +121,9 @@ class LocomoteConfiguration implements ConfigurationInterface
                     ->treatNullLike(['enable' => false])
                     ->normalizeKeys(false)
                     ->children()
-
                         ->booleanNode('enable')
                             ->defaultFalse()
                         ->end()
-
                         ->arrayNode('events')
                             ->performNoDeepMerging()
                             ->prototype('scalar')
@@ -137,11 +133,9 @@ class LocomoteConfiguration implements ConfigurationInterface
                             ->end()
                             ->end()
                         ->end()
-
                         ->scalarNode('api-key')
                             ->cannotBeEmpty()
                         ->end()
-
                     ->end()
                 ->end()
 
@@ -152,11 +146,9 @@ class LocomoteConfiguration implements ConfigurationInterface
                     ->treatNullLike(['enable' => false])
                     ->normalizeKeys(false)
                     ->children()
-
                         ->booleanNode('enable')
                             ->defaultFalse()
                         ->end()
-
                         ->arrayNode('events')
                             ->performNoDeepMerging()
                             ->prototype('scalar')
@@ -166,7 +158,6 @@ class LocomoteConfiguration implements ConfigurationInterface
                             ->end()
                             ->end()
                         ->end()
-
                     ->end()
                 ->end()
 

@@ -102,6 +102,8 @@ class DatabaseManager
      * Makes use of the Phinx TextWrapper.
      *
      * @return DatabaseManager
+     *
+     * @throws \InvalidArgumentException
      **/
     public function doMaintenance()
     {
@@ -159,11 +161,13 @@ class DatabaseManager
      * Provides a wrapping method to facilitate calls to Phinx and handle any
      * errors or exceptions provided by its exit code.
      *
+     * @param string $command The Phinx command to run
+     *
      * @return string The ouput from Phinx command
      */
     private function phinxCall($command)
     {
-        if (!isset($this->phinx)) {
+        if (null === $this->phinx) {
             $this->bootPhinx();
         }
 

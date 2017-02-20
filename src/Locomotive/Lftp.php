@@ -111,11 +111,7 @@ class Lftp
 
     public function listDir($path, $cls = true)
     {
-        if ($cls === true) {
-            $cmd = "cls $path";
-        } else {
-            $cmd = "ls $path";
-        }
+        $cmd = ($cls === true) ? "cls $path" : "ls $path";
 
         $this->addCommand($cmd);
 

@@ -814,9 +814,12 @@ class Locomotive
             $hostItems = $finder->depth('== 0');
 
             // constrain search to source directory
-            // TODO: catch exception
-            $hostItems->in('ssh2.sftp://' . (int)$this->sshSession . $source)
-                      ->ignoreDotFiles(true);
+            try {
+                $hostItems->in('ssh2.sftp://' . (int)$this->sshSession . $source)
+                          ->ignoreDotFiles(true);
+            } catch (\Exception $e) {
+                $this->logger->error($e->getMessage());
+            }
 
             // collect the source items
             $collectedHostItems = Collection::make(iterator_to_array($hostItems, false));

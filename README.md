@@ -4,8 +4,9 @@ using segmented and parallel transfers.
 
 **Locomotive** is intended to be run as a repeated, scheduled job (ie: crontab), and
 depends on successive runs to handle the moving of transfered items, LFTP queue monitoring,
-and other necessary tasks. The suggested run interval is *ten minutes*, but may be run more
-or less often depending on the user's needs.
+and other necessary tasks. The suggested run interval is *five minutes*, but may be run more
+or less often depending on the user's needs. It is not suggested to run **Locomotive** more
+often than every two minutes.
 
 Requirements
 ------------
@@ -44,6 +45,7 @@ config file settings.
 **Locomotive** looks for configuraiton files in YAML format in the following
 locations, ordered by precedence:
 
+1. `~/.config/locomotive/config.yml`
 1. `~/.locomotive`
 2. `config.yml`
 3. `app/default-config.yml`

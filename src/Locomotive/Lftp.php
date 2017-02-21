@@ -89,7 +89,7 @@ class Lftp
         $this->options = $options;
         $this->logger = $logger;
         $this->fileSystem = new Filesystem();
-        $this->sourcingFile = BASEPATH . '/app/storage/working/' . uniqid('lftp-source.', true);
+        $this->sourcingFile = '/tmp/' . uniqid('lftp-source.', true);
     }
 
     public function connect()
@@ -255,9 +255,6 @@ class Lftp
 
         // clear command variables and sourcing file
         unset($this->command, $this->commands);
-        if ($hasSourcingFile) {
-            unlink($this->sourcingFile);
-        }
 
         return $output;
     }

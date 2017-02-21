@@ -14,6 +14,7 @@
 namespace Locomotive;
 
 use Carbon\Carbon;
+use DirectoryIterator;
 use Illuminate\Database\Capsule\Manager as Capsule;
 use Illuminate\Support\Collection;
 use League\Event\Emitter;
@@ -471,14 +472,10 @@ class Locomotive
             $this->logger->debug('Unfinished items found in local queue. Checking for completeness.');
 
             $localQueue->each(function ($item) {
-                // seeking to file location
-                $finderItem = new Finder();
-                $finderItem->in($this->options['working-dir'])
-                           ->name($item->name);
-                $finderItem = current(iterator_to_array($finderItem));
+                $file = new \SplFileInfo($this->options['working-dir'] . $item->name);
 
-                if ($finderItem !== false) {
-                    $itemSize = $this->calculateItemSize($finderItem);
+                if ($file->isFile() || $file->isDir()) {
+                    $itemSize = $this->calculateItemSize($file);
 
                     // check file size and mark as finished
                     if (

@@ -20,6 +20,7 @@
         "symfony/config": "~3.2",
         "symfony/yaml": "~3.2",
         "symfony/finder": "~3.2",
+        "symfony/filesystem": "~3.2",
         "monolog/monolog": "^1.22",
         "bramus/monolog-colored-line-formatter": "~2.0",
         "league/event": "^2.1",

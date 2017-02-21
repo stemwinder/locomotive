@@ -14,6 +14,8 @@
 namespace Locomotive;
 
 use Monolog\Logger;
+use Symfony\Component\Filesystem\Exception\IOExceptionInterface;
+use Symfony\Component\Filesystem\Filesystem;
 
 class Lftp
 {
@@ -56,6 +58,27 @@ class Lftp
     protected $connection;
 
     /**
+     * The Filesystem instance
+     *
+     * @var Filesystem
+     **/
+    protected $fileSystem;
+
+    /**
+     * The file in which to record fetch commands
+     *
+     * @var String
+     **/
+    protected $sourcingFile;
+
+    /**
+     * The current sourcing commands array.
+     *
+     * @var array
+     **/
+    protected $sourcingCommands;
+
+    /**
      * Class Constructor.
      *
      * @param array $options A place to pass through some settings
@@ -65,6 +88,8 @@ class Lftp
     {
         $this->options = $options;
         $this->logger = $logger;
+        $this->fileSystem = new Filesystem();
+        $this->sourcingFile = BASEPATH . '/app/storage/working/' . uniqid('lftp-source.', true);
     }
 
     public function connect()
@@ -120,9 +145,6 @@ class Lftp
 
     public function mirrorDir($path, $pget = false, $parallel = false, $queue = false)
     {
-        // escape problem characters in path
-        $path = str_replace(' ', "\\ ", addslashes($path));
-
         $cmd = 'mirror -c';
 
         if ($pget) {
@@ -133,41 +155,53 @@ class Lftp
             $cmd .= " --parallel=$parallel";
         }
 
-        $cmd .= " $path " . $this->options['working-dir'];
+        $cmd .= " \"$path\" " . $this->options['working-dir'];
 
         if ($queue === true) {
             $cmd = "queue $cmd";
         }
 
-        $this->addCommand($cmd);
+        $this->addSourcingCommand($cmd);
 
         return $this;
     }
 
     public function pgetFile($path, $conn = false, $queue = false)
     {
-        // escape problem characters in path
-        $path = str_replace(' ', "\\ ", addslashes($path));
-
         $cmd = 'pget -c';
 
         if ($conn) {
             $cmd .= " -n $conn";
         }
 
-        $cmd .= " $path -o " . $this->options['working-dir'];
+        $cmd .= " \"$path\" -o " . $this->options['working-dir'];
 
         if ($queue === true) {
             $cmd = "queue $cmd";
         }
 
-        $this->addCommand($cmd);
+        $this->addSourcingCommand($cmd);
 
         return $this;
     }
 
     public function execute($detach = false, $attach = false, $terminalId = null)
     {
+        $hasSourcingFile = false;
+
+        // write sourcing commands to temporary file
+        if (count($this->sourcingCommands) > 0) {
+            try {
+                $sourceCommands = implode(";\n", $this->sourcingCommands) . ';';
+                $this->fileSystem->dumpFile($this->sourcingFile, $sourceCommands);
+                $hasSourcingFile = true;
+            } catch (IOExceptionInterface $e) {
+                $this->logger->critical($e->getMessage());
+
+                exit(1);
+            }
+        }
+
         // set connection command
         $this->connect();
 
@@ -181,6 +215,11 @@ class Lftp
         foreach ($this->commands as $cmd) {
             $this->command .= "$cmd; ";
         }
+
+        if ($hasSourcingFile === true) {
+            $this->command .= "source {$this->sourcingFile}; ";
+        }
+
         $this->command = rtrim($this->command);
 
         if ($attach === true) {
@@ -214,8 +253,11 @@ class Lftp
         // add command to log
         $this->commandLog[] = $this->command;
 
-        // clear command variables
+        // clear command variables and sourcing file
         unset($this->command, $this->commands);
+        if ($hasSourcingFile) {
+            unlink($this->sourcingFile);
+        }
 
         return $output;
     }
@@ -223,6 +265,13 @@ class Lftp
     public function addCommand($command)
     {
         $this->commands[] = $command;
+
+        return $this;
+    }
+
+    public function addSourcingCommand($command)
+    {
+        $this->sourcingCommands[] = $command;
 
         return $this;
     }

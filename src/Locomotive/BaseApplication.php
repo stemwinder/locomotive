@@ -29,7 +29,7 @@ class BaseApplication extends Application
      * @param string $name The Application Name
      * @param string $version The Application Version
      */
-    public function __construct($name = 'Locomotive', $version = '1.4.1')
+    public function __construct($name = 'Locomotive', $version = '1.4.2')
     {
         // setting script execution time to unlimited just to be safe. This should
         // default to unlimited for PHP CLI on most systems, though.

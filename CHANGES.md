@@ -1,5 +1,10 @@
 # Locomotive Change Log
 
+<a name="1.4.2"></a>
+## 1.4.2
+- Adds new config file location option
+- Adds `composer.lock` file to repo
+
 <a name="1.4.1"></a>
 ## 1.4.1
 - Bugfix: Phinx config file location declaration was preventing **Locomotive** from being run outside the app's root directory

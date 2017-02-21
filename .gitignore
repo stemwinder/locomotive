@@ -1,5 +1,4 @@
 vendor/
-composer.lock
 locomotive.log
 app/storage/locomotive.sqlite
 app/storage/working/*

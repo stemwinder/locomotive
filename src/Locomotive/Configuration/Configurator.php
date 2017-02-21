@@ -110,16 +110,22 @@ class Configurator
      **/
     private function loadUserConfiguration()
     {
-        $userHomeConfigFile = USERHOME . '/.locomotive';
-        $userConfigFile = BASEPATH . '/config.yml';
+        $configLocations = [
+            USERHOME . '/.config/locomotive/config.yml',
+            USERHOME . '/.locomotive',
+            BASEPATH . '/config.yml'
+        ];
 
-        if (file_exists($userHomeConfigFile)) {
-            $this->user = Yaml::parse($userHomeConfigFile);
-            $this->logger->debug('User YAML config loaded from: ' . $userHomeConfigFile);
-        } elseif (file_exists($userConfigFile)) {
-            $this->user = Yaml::parse(file_get_contents($userConfigFile));
-            $this->logger->debug('User YAML config loaded from: ' . $userConfigFile);
-        } else {
+        $userConfigFound = false;
+        foreach ($configLocations as $configFile) {
+            if (file_exists($configFile)) {
+                $this->user = Yaml::parse(file_get_contents($configFile));
+                $this->logger->debug('User YAML config loaded from: ' . $configFile);
+                $userConfigFound = true;
+            }
+        }
+
+        if ($userConfigFound !== true) {
             $this->logger->warning('No user config file was found.');
             $this->user = array();
         }

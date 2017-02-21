@@ -6,4 +6,4 @@ environments:
     default_database: production
     production:
         adapter: sqlite
-        name: ./app/storage/locomotive.sqlite
+        name: %%PHINX_CONFIG_DIR%%/app/storage/locomotive.sqlite

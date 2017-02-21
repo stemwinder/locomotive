@@ -1,5 +1,9 @@
 # Locomotive Change Log
 
+<a name="1.4.3"></a>
+## 1.4.3
+- Bugfix: Transfers with special characters in their paths are now handled appropriately
+
 <a name="1.4.2"></a>
 ## 1.4.2
 - Adds new config file location option

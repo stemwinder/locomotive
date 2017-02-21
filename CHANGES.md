@@ -1,5 +1,9 @@
 # Locomotive Change Log
 
+<a name="1.4.1"></a>
+## 1.4.1
+- Bugfix: Phinx config file location declaration was preventing **Locomotive** from being run outside the app's root directory
+
 <a name="1.4.0"></a>
 ## 1.4.0
 - Adds support for notifications

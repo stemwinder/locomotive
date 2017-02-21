@@ -195,7 +195,7 @@ class DatabaseManager
     }
 
     /**
-     * Gets the current migration version by parsing output from the  Phinx
+     * Gets the current migration version by parsing output from the Phinx
      * `status` command and casting it to an integer.
      *
      * @return int The current migration version

@@ -1,5 +1,9 @@
 # Locomotive Change Log
 
+<a name="1.4.4"></a>
+## 1.4.4
+- `transferStarted` events now onlt emitted once per item
+
 <a name="1.4.3"></a>
 ## 1.4.3
 - Bugfix: Transfers with special characters in their paths are now handled appropriately

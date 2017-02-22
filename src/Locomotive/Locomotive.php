@@ -3,7 +3,7 @@
 /**
  * Locomotive
  *
- * Copyright (c) 2015 Joshua Smith
+ * Copyright (c) 2015 Joshua Smith <josh@stemwinder.net>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -132,6 +132,13 @@ class Locomotive
      * @var array
      **/
     protected $options = array();
+
+    /**
+     * Items in the local DB queue for this run.
+     *
+     * @var LocalQueue
+     **/
+    protected $localQueue;
 
     /**
      * Locomotive Constructor.
@@ -453,14 +460,14 @@ class Locomotive
         if ($this->mappedQueue->count() < 1) {
             // a background-ed lftp queue was never detected; assume it has cleared
             // since last run and check local items
-            $localQueue = LocalQueue::notForRun($this->runId)
+            $this->localQueue = LocalQueue::notForRun($this->runId)
                                     ->notFinished()
                                     ->notFailed()
                                     ->get();
         } else {
             // get all unfinished items from local DB queue that don't exist
             // in mapped queue (aren't currently active in lftp)
-            $localQueue = LocalQueue::notForRun($this->runId)
+            $this->localQueue = LocalQueue::notForRun($this->runId)
                                     ->notFinished()
                                     ->notFailed()
                                     ->lftpActive($this->mappedQueue->keys())
@@ -468,10 +475,10 @@ class Locomotive
         }
 
         // mark items finished if file size matches
-        if ($localQueue->count() > 0) {
+        if ($this->localQueue->count() > 0) {
             $this->logger->debug('Unfinished items found in local queue. Checking for completeness.');
 
-            $localQueue->each(function ($item) {
+            $this->localQueue->each(function ($item) {
                 $file = new \SplFileInfo($this->options['working-dir'] . $item->name);
 
                 if ($file->isFile() || $file->isDir()) {
@@ -645,10 +652,12 @@ class Locomotive
             }
 
             // record transfer in local queue
-            $this->recordItemToQueue($item, $transferPath);
+            $localQueueItem = $this->recordItemToQueue($item, $transferPath);
 
-            // emit `transferStarted` event
-            $this->emitter->emit('event.transferStarted', $item->getBasename());
+            // emit `transferStarted` event only once per item
+            if ((int)$localQueueItem->retries === 0) {
+                $this->emitter->emit('event.transferStarted', $item->getBasename());
+            }
         });
 
         if (count($transferList) > 0) {

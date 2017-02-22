@@ -3,7 +3,7 @@
 /**
  * Locomotive
  *
- * Copyright (c) 2015 Joshua Smith
+ * Copyright (c) 2015 Joshua Smith <josh@stemwinder.net>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -29,7 +29,7 @@ class BaseApplication extends Application
      * @param string $name The Application Name
      * @param string $version The Application Version
      */
-    public function __construct($name = 'Locomotive', $version = '1.4.3')
+    public function __construct($name = 'Locomotive', $version = '1.4.4')
     {
         // setting script execution time to unlimited just to be safe. This should
         // default to unlimited for PHP CLI on most systems, though.

@@ -3,7 +3,7 @@
 /**
  * Locomotive
  *
- * Copyright (c) 2015 Joshua Smith
+ * Copyright (c) 2015 Joshua Smith <josh@stemwinder.net>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.

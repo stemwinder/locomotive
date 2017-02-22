@@ -1,6 +1,6 @@
 # Locomotive
-A PHP command line app providing scheduled, aggressive, mirrored file fetching
-using segmented and parallel transfers.
+A command line PHP app for managing scheduled, aggressive file fetching
+using segmented and parallel transfers via [LFTP](http://lftp.yar.ru).
 
 **Locomotive** is intended to be run as a repeated, scheduled job (ie: crontab), and
 depends on successive runs to handle the moving of transfered items, LFTP queue monitoring,
@@ -16,7 +16,8 @@ Requirements
 * [SSH2 Extension](http://www.php.net/manual/en/book.ssh2.php) >= v0.13
   * With [libssh2](https://www.libssh2.org) >= v1.4.3
 * [SQLite3 Extension](http://php.net/manual/en/book.sqlite3.php)
-* [LFTP](http://lftp.yar.ru) (tested with version v4.4.13)
+* [LFTP](http://lftp.yar.ru) >= v4.4.13 (tested up to v4.6.0)
+* Only sFTP connections are supported
 
 Installation
 ------------

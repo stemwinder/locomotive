@@ -1,4 +1,5 @@
-# Locomotive
+<img src="https://s3.amazonaws.com/stemwinder-pub/locomotive/locomotive-banner.png">
+
 A command line PHP app for managing scheduled, aggressive file fetching
 using segmented and parallel transfers via [LFTP](http://lftp.yar.ru).
 

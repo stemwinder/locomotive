@@ -231,8 +231,7 @@ class Locomote extends Command
         $locomotive->setLimits()
                    ->updateLocalQueue()
                    ->initiateTransfers()
-                   ->moveFinished()
-                   ->removeSourceFiles();
+                   ->moveFinished();
 
         // write main status to output: new transfers
         if ($locomotive->newTransfers) {

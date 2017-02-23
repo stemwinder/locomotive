@@ -733,69 +733,6 @@ class Locomotive
     }
 
     /**
-     * Removes finished items from source.
-     *
-     * @return Locomotive
-     **/
-    public function removeSourceFiles()
-    {
-        if ($this->options['remove-sources']['remove'] !== true) {
-            return $this;
-        }
-
-        $this->logger->debug('Beginning source file removal.');
-
-        // getting finished items
-        $finished = LocalQueue::finished()
-                              ->notFailed()
-                              ->where('source_cleaned', false)
-                              ->get();
-
-        if ($finished->count() > 0) {
-            $fs = new Filesystem();
-
-            // applying source exclusion from config
-            if (count($this->options['remove-sources']['exclude']) > 0) {
-                $finished = $finished->reject(function ($item) {
-                    foreach ($this->options['remove-sources']['exclude'] as $exclusion) {
-                        if (str_contains(trim($exclusion, '/'), trim($item->source_dir, '/'))) {
-                            return true;
-                        }
-                    }
-                });
-            }
-
-            $finished->each(function ($item) use ($fs) {
-                $sourceItemPath = rtrim($item->source_dir, '/') . '/' . $item->name;
-                $sourceStream = 'ssh2.sftp://' . (int)$this->sshSession . $sourceItemPath;
-
-                // check to make sure item path exists on source as a sort
-                // of sanity check to prevent bad things
-                if ($fs->exists($sourceStream)) {
-                    try {
-                        @$fs->remove($sourceStream);
-
-                        $item->source_cleaned = true;
-                        $item->save();
-
-                        $this->logger->info("The following item was removed from source: $sourceItemPath");
-                    } catch (\Exception $e) {
-                        $this->logger->warning($e->getMessage());
-                    } catch (IOExceptionInterface $e) {
-                        $this->logger->warning($e->getMessage());
-                    }
-                }
-
-                if ($item->source_cleaned !== true) {
-                    $this->logger->warning("There was a problem removing an item: $sourceItemPath");
-                }
-            });
-        }
-
-        return $this;
-    }
-
-    /**
      * Gets all unfiltered items from host sources and structures them into
      * tidy collections keyed by source path.
      *

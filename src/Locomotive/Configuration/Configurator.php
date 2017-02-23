@@ -87,7 +87,7 @@ class Configurator
      **/
     private function loadDefaultConfiguration()
     {
-        $defaultConfigFile = BASEPATH . '/app/default-config.yml';
+        $defaultConfigFile = BASEPATH . '/app/config/default-config.yml';
 
         if (!file_exists($defaultConfigFile)) {
             $this->logger->error('Default YAML config file not found at: ' . realpath($defaultConfigFile));
@@ -155,7 +155,7 @@ class Configurator
 
     private function loadAppConfiguration()
     {
-        $appConfigFile = BASEPATH . '/src/app-config.yml';
+        $appConfigFile = BASEPATH . '/app/config/locomotive.yml';
 
         if (file_exists($appConfigFile)) {
             $this->app = Yaml::parse(file_get_contents($appConfigFile));
@@ -178,20 +178,6 @@ class Configurator
     private function processConfigurationValues()
     {
         $configs = array($this->defaults, $this->user, $this->cli);
-
-        // protects `remove-source` from being set as `true` if null
-        foreach ($configs as $configType => &$values) {
-            if (
-                isset($values['remove-sources'])
-                && (
-                    !array_key_exists('remove', $values['remove-sources'])
-                    || null === $values['remove-sources']['remove']
-                )
-            ) {
-                $values['remove-sources']['remove'] = false;
-            }
-        }
-        unset($values);
 
         $processor = new Processor();
         $configuration = new LocomoteConfiguration();

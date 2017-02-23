@@ -1,5 +1,12 @@
 # Locomotive Change Log
 
+<a name="1.5.0"></a>
+## 1.5.0
+- Removes support for source file deletion
+  - This feature is simply too dangerous to implement across varied, unknown environments
+- Consolidates configuration files into central location
+- Optimizes database management
+
 <a name="1.4.4"></a>
 ## 1.4.4
 - `transferStarted` events now onlt emitted once per item

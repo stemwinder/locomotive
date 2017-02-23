@@ -79,6 +79,13 @@ class Lftp
     protected $sourcingCommands;
 
     /**
+     * The path to LFTP
+     *
+     * @var String
+     **/
+    protected $lftpPath;
+
+    /**
      * Class Constructor.
      *
      * @param array $options A place to pass through some settings
@@ -90,6 +97,7 @@ class Lftp
         $this->logger = $logger;
         $this->fileSystem = new Filesystem();
         $this->sourcingFile = '/tmp/' . uniqid('lftp-source.', true);
+        $this->lftpPath = $this->options['lftp-path'] ?: 'lftp';
     }
 
     public function connect()
@@ -223,7 +231,7 @@ class Lftp
         $this->command = rtrim($this->command);
 
         if ($attach === true) {
-            $this->command .= '" | lftp -c attach';
+            $this->command .= '" | '. $this->lftpPath .' -c attach';
 
             if (null !== $terminalId) {
                 $this->command .= " $terminalId";
@@ -231,16 +239,16 @@ class Lftp
         }
 
         // execute command
-        $this->logger->debug("Executing lftp commands: $this->command");
+        $this->logger->debug("Executing LFTP commands: $this->command");
 
         if ($detach === true) {
             $this->command .= ' exit parent;';
-            exec("lftp -c '$this->command' > /dev/null 2>&1 & echo $!", $output);
+            exec("$this->lftpPath -c '$this->command' > /dev/null 2>&1 & echo $!", $output);
 
             // assuming an OK exit
             $exitCode = 0;
         } else {
-            exec("lftp -c '$this->command' 2>&1", $output, $exitCode);
+            exec("$this->lftpPath -c '$this->command' 2>&1", $output, $exitCode);
         }
 
         // deal with exit code failures

@@ -24,7 +24,6 @@ use Monolog\Logger;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Filesystem\Exception\IOException;
-use Symfony\Component\Filesystem\Exception\IOExceptionInterface;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\Finder\SplFileInfo;
@@ -88,21 +87,21 @@ class Locomotive
     public $isLftpBackgrounded;
 
     /**
-     * The process ID of the lftp terminal attachment.
+     * The process ID of the LFTP terminal attachment.
      *
      * @var Int
      **/
     public $lftpTerminalId;
 
     /**
-     * Current count of items in lftp queue.
+     * Current count of items in LFTP queue.
      *
      * @var Int
      **/
     public $lftpQueueCount;
 
     /**
-     * Current mapping of active lftp queue items to known local DB
+     * Current mapping of active LFTP queue items to known local DB
      * queue items.
      *
      * @var Collection
@@ -209,7 +208,7 @@ class Locomotive
     }
 
     /**
-     * Checks for any missing system dependencies. For now, that's just `lftp`.
+     * Checks for any missing system dependencies. For now, that's just LFTP.
      *
      * @return mixed
      **/
@@ -325,24 +324,24 @@ class Locomotive
     }
 
     /**
-     * Gets the status of the lftp queue.
+     * Gets the status of the LFTP queue.
      *
      * @return array The response from `lftp queue`
      **/
     public function getLftpStatus()
     {
-        $this->logger->debug('Checking lftp status via queue attachment attempt.');
+        $this->logger->debug('Checking LFTP status via queue attachment attempt.');
 
         $status = $this->lftp->addCommand('queue')
                              ->execute(false, true);
 
         // test for background-ed process
         if (strpos(end($status), 'backgrounded') !== false) {
-            $this->logger->debug('It appears that lftp is NOT background-ed.');
+            $this->logger->debug('It appears that LFTP is NOT backgrounded.');
 
             $this->isLftpBackgrounded = false;
         } else {
-            $this->logger->debug('It appears that lftp IS background-ed.');
+            $this->logger->debug('It appears that LFTP IS backgrounded.');
 
             $this->isLftpBackgrounded = true;
         }
@@ -351,26 +350,26 @@ class Locomotive
     }
 
     /**
-     * Parses the raw output from the lftp queue. Builds a queue mapping for
-     * lftp and local items, and sets important class variables like the lftp
-     * queue count.
+     * Parses the raw output from the LFTP queue. Builds a queue mapping for
+     * LFTP and local items, and sets important class variables like the `lftp
+     * queue` count.
      *
-     * @param array $queueOutput The raw lftp queue terminal output.
+     * @param array $queueOutput The raw `lftp queue` terminal output.
      *
      * @return Locomotive
      **/
     public function parseLftpQueue(array $queueOutput)
     {
-        $this->logger->debug('An active lftp queue was found. Begin parsing.');
+        $this->logger->debug('An active LFTP queue was found. Begin parsing.');
 
         // use Illuminate\Collection to ease the pain
         $lftpQueue = Collection::make($queueOutput);
         $lftpQueue->pop();
 
-        // parse terminal ID out of lftp queue output
+        // parse terminal ID out of `lftp queue` output
         preg_match("/(\\[\\d+\\]).+/", $lftpQueue->first(), $matches);
         $this->lftpTerminalId = trim($matches[1], '[]');
-        $this->logger->debug("Setting the lftp terminal attachment ID to $this->lftpTerminalId.");
+        $this->logger->debug("Setting the LFTP terminal attachment ID to $this->lftpTerminalId.");
 
         // seek to beginning of active items
         $activeKey = $lftpQueue->search(function ($item) {
@@ -409,13 +408,13 @@ class Locomotive
             return ltrim($item);
         });
 
-        // create a merged list of all lftp queue items
+        // create a merged list of all `lftp queue` items
         $mergedLftpQueue = $activeItems->merge($queuedItems);
 
         // get all unfinished items from local DB queue
         $localQueue = LocalQueue::notFinished()->get();
 
-        // map lftp queue items to local DB queue items
+        // map `lftp queue` items to local DB queue items
         $localQueue->each(function ($localItem) use ($mergedLftpQueue) {
             $mappedItem = $mergedLftpQueue->search(function ($aItem) use ($localItem) {
                 return str_contains($aItem, $localItem->name);
@@ -428,7 +427,7 @@ class Locomotive
 
         // set class variable with count of current active items
         $this->lftpQueueCount = $this->mappedQueue->count();
-        $this->logger->debug("Recording the lftp queue count as $this->lftpQueueCount");
+        $this->logger->debug("Recording the LFTP queue count as $this->lftpQueueCount");
 
         // TODO: parse stats
         /*$parsedQueue = array();
@@ -458,7 +457,7 @@ class Locomotive
         $this->logger->debug('Beginning local DB queue update.');
 
         if ($this->mappedQueue->count() < 1) {
-            // a background-ed lftp queue was never detected; assume it has cleared
+            // a backgrounded LFTP queue was never detected; assume it has cleared
             // since last run and check local items
             $this->localQueue = LocalQueue::notForRun($this->runId)
                                     ->notFinished()
@@ -466,7 +465,7 @@ class Locomotive
                                     ->get();
         } else {
             // get all unfinished items from local DB queue that don't exist
-            // in mapped queue (aren't currently active in lftp)
+            // in mapped queue (aren't currently active in LFTP)
             $this->localQueue = LocalQueue::notForRun($this->runId)
                                     ->notFinished()
                                     ->notFailed()
@@ -567,7 +566,7 @@ class Locomotive
      * Initiates transfers based on number of available slots.
      *
      * Handles SSH session setup; source item list retreival, filtering, and
-     * zipping; speed limit setting; lftp command issuance; and recording
+     * zipping; speed limit setting; LFTP command issuance; and recording
      * active/new transfers to the local queue.
      *
      * @param int $availableSlots Number of slots available for transfer
@@ -581,7 +580,7 @@ class Locomotive
         if (null === $availableSlots) {
             $lftpQueueCount = $this->lftpQueueCount ?: 0;
 
-            // assume lftp queue is inactive
+            // assume LFTP queue is inactive
             $availableSlots = $this->options['transfer-limit'] - $lftpQueueCount;
 
             if ($availableSlots === 0) {
@@ -611,9 +610,9 @@ class Locomotive
         // set speed limit before initiating transfers
         $this->lftp->setSpeedLimit($this->options['speed-limit']);
 
-        // issue lftp commands depending on `isDir()` or `isFile()`
+        // issue LFTP commands depending on `isDir()` or `isFile()`
         $transferList->each(function ($item) {
-            // parse out path to send to lftp
+            // parse out path to send to LFTP
             $transferPath = $item->getPath();
             preg_match('@ssh2.sftp://(.+?)/(.+)@us', $transferPath, $matches);
             $transferPath = "/$matches[2]/";
@@ -703,11 +702,11 @@ class Locomotive
                 $targetDir = rtrim($item->target_dir, '/') . '/';
 
                 // check for existence of target directory
-                if (!$fs->exists($targetDir)) {
+                if ($fs->exists($targetDir) === false) {
                     $this->logger->error("The target directory could not be found: $targetDir");
                 } else {
                     try {
-                        $fs->rename($workingDir . $item->name, $targetDir . $item->name);
+                        $fs->rename($workingDir . $item->name, $targetDir . $item->name, true);
 
                         $item->is_moved = true;
                         $item->save();
@@ -727,69 +726,6 @@ class Locomotive
             });
         } else {
             $this->logger->debug('No finished items were returned from the local DB queue.');
-        }
-
-        return $this;
-    }
-
-    /**
-     * Removes finished items from source.
-     *
-     * @return Locomotive
-     **/
-    public function removeSourceFiles()
-    {
-        if ($this->options['remove-sources']['remove'] !== true) {
-            return $this;
-        }
-
-        $this->logger->debug('Beginning source file removal.');
-
-        // getting finished items
-        $finished = LocalQueue::finished()
-                              ->notFailed()
-                              ->where('source_cleaned', false)
-                              ->get();
-
-        if ($finished->count() > 0) {
-            $fs = new Filesystem();
-
-            // applying source exclusion from config
-            if (count($this->options['remove-sources']['exclude']) > 0) {
-                $finished = $finished->reject(function ($item) {
-                    foreach ($this->options['remove-sources']['exclude'] as $exclusion) {
-                        if (str_contains(trim($exclusion, '/'), trim($item->source_dir, '/'))) {
-                            return true;
-                        }
-                    }
-                });
-            }
-
-            $finished->each(function ($item) use ($fs) {
-                $sourceItemPath = rtrim($item->source_dir, '/') . '/' . $item->name;
-                $sourceStream = 'ssh2.sftp://' . (int)$this->sshSession . $sourceItemPath;
-
-                // check to make sure item path exists on source as a sort
-                // of sanity check to prevent bad things
-                if ($fs->exists($sourceStream)) {
-                    try {
-                        @$fs->remove($sourceStream);
-
-                        $item->source_cleaned = true;
-                        $item->save();
-
-                        $this->logger->info("The following item was removed from source: $sourceItemPath");
-                    } catch (\Exception $e) {
-                        $this->logger->warning($e->getMessage());
-                    } catch (IOExceptionInterface $e) {
-                        $this->logger->warning($e->getMessage());
-                    }
-                }
-
-                if ($item->source_cleaned !== true) {
-                    $this->logger->warning("There was a problem removing an item: $sourceItemPath");
-                }
-            });
         }
 
         return $this;
@@ -1042,7 +978,7 @@ class Locomotive
     }
 
     /**
-     * A wrapping method to set global lftp limits on the host.
+     * A wrapping method to set global LFTP limits on the host.
      *
      * Current limits supported: speed, queue items
      *

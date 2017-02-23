@@ -10,9 +10,6 @@ transfer-limit: 3
 max-retries: 5
 newer-than:
 zip-sources: false
-remove-sources:
-  remove: false
-  exclude:
 speed-schedule:
 source-target-map:
 post-processors:

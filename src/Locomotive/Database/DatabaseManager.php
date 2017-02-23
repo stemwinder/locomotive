@@ -19,7 +19,6 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Illuminate\Database\Capsule\Manager as Capsule;
 use Phinx\Console\PhinxApplication;
 use Phinx\Wrapper\TextWrapper;
-use Symfony\Component\Finder\Finder;
 
 class DatabaseManager
 {
@@ -110,27 +109,20 @@ class DatabaseManager
         $this->logger->debug('Beginning database maintenance.');
 
         // Check if database exists. If not, run migrations.
-        if (!$this->dbDoesExist()) {
-            $this->logger->debug('No database found. Attempting to migrate.');
+        if ($this->dbDoesExist() === false) {
+            $this->logger->notice('No database found. Attempting DB setup.');
 
             $this->phinxCall('migrate');
 
-            $this->logger->debug('Migration succeeded.');
+            $this->logger->notice('Database installed at: ' . $this->getDatabase());
         }
 
-        // Gets current version of database
-        $currentMigration = $this->getCurrentMigration();
-
-        // Get latest migration available
-        $latestMigration = $this->getLatestMigration();
-
-        // Migrate if DB version is < `migrations` dir version
-        if ($latestMigration > $currentMigration) {
-            $this->logger->debug('Database schema is old. Attempting to migrate.');
+        if ($this->dbNeedsMigration() === true) {
+            $this->logger->notice('Database schema is old. Attempting to migrate.');
 
             $this->phinxCall('migrate');
 
-            $this->logger->debug('Migration succeeded.');
+            $this->logger->notice('Migration succeeded.');
         } else {
             $this->logger->debug('Database schema is at most current version.');
         }
@@ -142,6 +134,11 @@ class DatabaseManager
 
     /**
      * Instatiates a new instance of Phinx and its TextWrapper helper.
+     *
+     * @see PhinxApplication
+     * @see TextWrapper
+     *
+     * @return void
      **/
     private function bootPhinx()
     {
@@ -150,7 +147,7 @@ class DatabaseManager
         $phinxWrapper = new TextWrapper($phinxApp);
 
         // Set some base config options
-        $phinxWrapper->setOption('configuration', BASEPATH . '/phinx.yml')
+        $phinxWrapper->setOption('configuration', BASEPATH . '/app/config/phinx.yml')
                      ->setOption('parser', 'YAML')
                      ->setOption('environment', 'production');
 
@@ -175,8 +172,11 @@ class DatabaseManager
         $builtCommand = 'get' . ucfirst($command);
         $commandResult = $this->phinx->$builtCommand();
 
-        if ((int)$this->phinx->getExitCode() !== 0) {
-            $this->logger->error('There was a problem with database maintenance.');
+        if (
+            ($command === 'status' && (int)$this->phinx->getExitCode() === 2)
+            || ($command !== 'status' && (int)$this->phinx->getExitCode() !== 0)
+        ) {
+            $this->logger->error('There was a problem with database maintenance. If this error reoccurs, consider deleting `locomotive.sqlite` and running Locomotive again.');
 
             exit(1);
         }
@@ -194,42 +194,19 @@ class DatabaseManager
         return file_exists($this->database);
     }
 
-    /**
-     * Gets the current migration version by parsing output from the Phinx
-     * `status` command and casting it to an integer.
-     *
-     * @return int The current migration version
-     **/
-    private function getCurrentMigration()
-    {
-        $matches = array();
-        preg_match("/\\d{14}/um", $this->phinxCall('status'), $matches);
-        $currentMigration = $matches[0];
-
-        return (int)$currentMigration;
-    }
 
     /**
-     * Gets the latest migration version available in the migrations directory,=.
+     * Checks to see if the database needs to be migrated.
      *
-     * @return int The latest migration version
+     * @see http://docs.phinx.org/en/latest/commands.html#the-status-command Status command exit codes
      *
-     * @throws \InvalidArgumentException
-     **/
-    private function getLatestMigration()
+     * @return bool
+     */
+    private function dbNeedsMigration()
     {
-        $finder = new Finder();
+        $this->phinxCall('status');
 
-        // Only return PHP files in the migrations directory, sorted by name ascending
-        $finder->files()
-               ->in(BASEPATH . '/app/migrations')
-               ->depth('== 0')
-               ->name('*.php')
-               ->sortByName();
-
-        $latestMigrationFileName = last(iterator_to_array($finder))->getRelativePathName();
-
-        return (int)strtok($latestMigrationFileName, '_');
+        return (int)$this->phinx->getExitCode() === 1;
     }
 
     /**

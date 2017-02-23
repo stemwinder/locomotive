@@ -1,4 +1,5 @@
-# Locomotive
+<img src="https://s3.amazonaws.com/stemwinder-pub/locomotive/locomotive-banner.png">
+
 A command line PHP app for managing scheduled, aggressive file fetching
 using segmented and parallel transfers via [LFTP](http://lftp.yar.ru).
 
@@ -113,3 +114,9 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+Credits
+----------
+
+The **Locomotive** icon was created by, and is used with the permission of, [Anthony Piraino](http://anthonypiraino.com/)
+at [The Iconfactory](https://iconfactory.com/).

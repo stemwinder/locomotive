@@ -6,6 +6,7 @@
   - This feature is simply too dangerous to implement across varied, unknown environments
 - Consolidates configuration files into central location
 - Optimizes database management
+- Bugfix: `lftp-path` config setting now being used
 
 <a name="1.4.4"></a>
 ## 1.4.4

@@ -218,12 +218,12 @@ class Locomote extends Command
                    ->setPaths()
                    ->validatePaths();
 
-        // initial probing for general lftp state
+        // initial probing for general LFTP state
         $lftpQueue = $locomotive->getLftpStatus();
 
         if ($locomotive->isLftpBackgrounded) {
-            // parse the lftp queue and set $locomotive class variables
-            // for lftp queued items and available slots
+            // parse the LFTP queue and set $locomotive class variables
+            // for LFTP queued items and available slots
             $locomotive->parseLftpQueue($lftpQueue);
         }
 

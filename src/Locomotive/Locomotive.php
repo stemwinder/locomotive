@@ -106,7 +106,7 @@ class Locomotive
      *
      * @var Collection
      **/
-    public $mappedQueue;
+    public $mappedLftpQueue;
 
     /**
      * Newly initiated transfers.
@@ -185,7 +185,7 @@ class Locomotive
         $metrics->save();
 
         $this->runId = uniqid('', true);
-        $this->mappedQueue = new Collection;
+        $this->mappedLftpQueue = new Collection;
         $this->movedItems = new Collection;
 
         // setting working directory
@@ -237,16 +237,12 @@ class Locomotive
      **/
     public function setPaths()
     {
-        // attempt to set source/target from config file if not provided at CLI
-        if (!array_filter([
-                $this->input->getArgument('source'),
-                $this->input->getArgument('target'),
-            ])
-        ) {
+        if (!array_filter([$this->input->getArgument('source'), $this->input->getArgument('target')])) {
+            // attempt to set source/target from config file if not provided at CLI
             $this->arguments['source'] = array_keys($this->options['source-target-map']);
             $this->arguments['target'] = array_values($this->options['source-target-map']);
-            // setting SOURCE to either single path or list
         } else {
+            // setting SOURCE to either single path or list
             $sourceArg = $this->input->getArgument('source');
             $this->arguments['source'] = str_contains($sourceArg, ':')
                 ? explode(':', $sourceArg)
@@ -315,8 +311,7 @@ class Locomotive
                 return str_contains($source, rtrim($sourceDir, '/'));
             }, ARRAY_FILTER_USE_BOTH);
 
-            // return the target path at the key matching the source, effectively
-            // mapping them together
+            // return the target path at the key matching the source, effectively mapping them together
             return $this->arguments['target'][key($matchingSource)];
         } else {
             return $this->arguments['target'];
@@ -421,12 +416,12 @@ class Locomotive
             });
 
             if ($mappedItem !== false) {
-                $this->mappedQueue->put($localItem->id, $mappedItem);
+                $this->mappedLftpQueue->put($localItem->id, $mappedItem);
             }
         });
 
         // set class variable with count of current active items
-        $this->lftpQueueCount = $this->mappedQueue->count();
+        $this->lftpQueueCount = $this->mappedLftpQueue->count();
         $this->logger->debug("Recording the LFTP queue count as $this->lftpQueueCount");
 
         // TODO: parse stats
@@ -456,24 +451,17 @@ class Locomotive
     {
         $this->logger->debug('Beginning local DB queue update.');
 
-        if ($this->mappedQueue->count() < 1) {
-            // a backgrounded LFTP queue was never detected; assume it has cleared
-            // since last run and check local items
-            $this->localQueue = LocalQueue::notForRun($this->runId)
-                                    ->notFinished()
-                                    ->notFailed()
-                                    ->get();
-        } else {
-            // get all unfinished items from local DB queue that don't exist
-            // in mapped queue (aren't currently active in LFTP)
-            $this->localQueue = LocalQueue::notForRun($this->runId)
-                                    ->notFinished()
-                                    ->notFailed()
-                                    ->lftpActive($this->mappedQueue->keys())
-                                    ->get();
+        // assume LFTP queue has cleared since last run and check local items
+        $this->localQueue = LocalQueue::notForRun($this->runId)
+                                      ->notFinished()
+                                      ->notFailed();
+        if ($this->mappedLftpQueue->count() >= 1) {
+            // a backgrounded LFTP queue was detected; get all unfinished items
+            // from local DB queue that don't exist in mapped queue (aren't currently active in LFTP)
+            $this->localQueue->lftpActive($this->mappedLftpQueue->keys());
         }
+        $this->localQueue->get();
 
-        // mark items finished if file size matches
         if ($this->localQueue->count() > 0) {
             $this->logger->debug('Unfinished items found in local queue. Checking for completeness.');
 
@@ -698,7 +686,6 @@ class Locomotive
             $fs = new Filesystem();
 
             $finished->each(function ($item) use ($workingDir, $fs) {
-                // move item
                 $targetDir = rtrim($item->target_dir, '/') . '/';
 
                 // check for existence of target directory
@@ -706,6 +693,7 @@ class Locomotive
                     $this->logger->error("The target directory could not be found: $targetDir");
                 } else {
                     try {
+                        // move item to target location
                         $fs->rename($workingDir . $item->name, $targetDir . $item->name, true);
 
                         $item->is_moved = true;
@@ -751,7 +739,6 @@ class Locomotive
 
         // retrieve all items from sources and build collections
         foreach ($sources as $source) {
-            // instantiate a new Finder instance
             $finder = new Finder();
             $hostItems = $finder->depth('== 0');
 
@@ -763,11 +750,10 @@ class Locomotive
                 $this->logger->error($e->getMessage());
             }
 
-            // collect the source items
             $collectedHostItems = Collection::make(iterator_to_array($hostItems, false));
-
-            // reject items that are still being unpacked
             $collectedHostItems = $collectedHostItems->reject(function ($item) {
+                // reject items that are still being unpacked
+                // TODO: rework to filters provided in config
                 if (starts_with($item->getBasename(), ['_UNPACK_', '_FAILED_'])) {
                     $this->logger->debug("An item was pattern-rejected: {$item->getBasename()}");
 
@@ -815,7 +801,7 @@ class Locomotive
 
         // retrieve items that can be retried (and aren't currently active)
         $retry = LocalQueue::canBeRetried($this->options['max-retries'])
-                           ->lftpActive($this->mappedQueue->keys())
+                           ->lftpActive($this->mappedLftpQueue->keys())
                            ->pluck('hash');
 
         // ensures that these are Collections even if only one item is returned from `LocalQueue::pluck()`
@@ -827,9 +813,9 @@ class Locomotive
             $seen = $seen->diff($retry);
         }
 
+        // filter out items seen in the local queue
         $items->transform(function (&$sourceItems) use ($seen) {
             return $sourceItems->reject(function ($item) use ($seen) {
-                // filter out items seen in the local queue
                 return $seen->contains(
                     $this->makeHash($item->getBasename(), $item->getMTime())
                 );

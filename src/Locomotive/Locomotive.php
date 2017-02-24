@@ -171,6 +171,27 @@ class Locomotive
     }
 
     /**
+     * Checks for any missing system dependencies. For now, that's just LFTP.
+     *
+     * @return mixed
+     **/
+    public function dependencyCheck()
+    {
+        // check for lFTP
+        if (!`which lftp`) {
+            $this->logger->critical(
+                "LFTP is either not installed on this system, or not in the path.\n"
+                . "Please provide the path in the Locomotive config or find out\n"
+                . 'more about LFTP by visiting: https://github.com/lavv17/lftp'
+            );
+
+            return 0;
+        }
+
+        return $this;
+    }
+
+    /**
      * Bootstrap Locomotive.
      *
      * @return Locomotive
@@ -203,27 +224,6 @@ class Locomotive
 
         // setup ssh/sftp session
         $this->createSshSession();
-
-        return $this;
-    }
-
-    /**
-     * Checks for any missing system dependencies. For now, that's just LFTP.
-     *
-     * @return mixed
-     **/
-    public function dependencyCheck()
-    {
-        // check for lFTP
-        if (!`which lftp`) {
-            $this->logger->critical(
-                "LFTP is either not installed on this system, or not in the path.\n"
-                . "Please provide the path in the Locomotive config or find out\n"
-                . 'more about LFTP by visiting: https://github.com/lavv17/lftp'
-            );
-
-            return 0;
-        }
 
         return $this;
     }
@@ -293,29 +293,6 @@ class Locomotive
         }
 
         return $this;
-    }
-
-    /**
-     * Gets a source path's mapped target path, or return the target path if no
-     * mapping is specified.
-     *
-     * @param string $sourceDir The source directory to search for a mapped target
-     *
-     * @return string A mapped target path
-     **/
-    private function mapTargetFromSource($sourceDir)
-    {
-        if (is_array($this->arguments['target']) && is_array($this->arguments['source'])) {
-            // get the key for the matching array source
-            $matchingSource = array_filter($this->arguments['source'], function ($source) use ($sourceDir) {
-                return str_contains($source, rtrim($sourceDir, '/'));
-            }, ARRAY_FILTER_USE_BOTH);
-
-            // return the target path at the key matching the source, effectively mapping them together
-            return $this->arguments['target'][key($matchingSource)];
-        } else {
-            return $this->arguments['target'];
-        }
     }
 
     /**
@@ -440,6 +417,22 @@ class Locomotive
     }
 
     /**
+     * A wrapping method to set global LFTP limits on the host.
+     *
+     * Current limits supported: speed, queue items
+     *
+     * @return Locomotive
+     **/
+    public function setLimits()
+    {
+        $this->lftp->setSpeedLimit($this->options['speed-limit'])
+                   ->setQueueTransferLimit($this->options['transfer-limit'])
+                   ->execute(false, $this->isLftpBackgrounded, $this->lftpTerminalId);
+
+        return $this;
+    }
+
+    /**
      * Updates item flags in the local database queue by comparing item stats
      * such as file size and count.
      *
@@ -504,50 +497,6 @@ class Locomotive
         }
 
         return $this;
-    }
-
-    /**
-     * Records a transfer in the local queue.
-     *
-     * @param SplFileInfo $item The transfered item
-     * @param string $transferPath The absolute transfer path
-     *
-     * @return LocalQueue The Eloquent model
-     *
-     * @throws \InvalidArgumentException
-     **/
-    private function recordItemToQueue($item, $transferPath)
-    {
-        // get item size
-        $itemSize = $this->calculateRemoteItemSize($item);
-
-        // create a hash; clean `$transferPath`; get the mapped target for the item
-        $hash = $this->makeHash($item->getBasename(), $item->getMTime());
-        $transferPath = rtrim($transferPath, '/');
-        $target = $this->mapTargetFromSource($transferPath);
-        $name = $item->getBasename();
-
-        // write the item to the local DB queue
-        $localQueue = LocalQueue::firstOrNew(['hash' => $hash]);
-
-        $localQueue->run_id = $this->runId;
-        $localQueue->name = $name;
-        $localQueue->host = $this->arguments['host'];
-        $localQueue->source_dir = $transferPath;
-        $localQueue->size_bytes = $itemSize['itemSize'];
-        $localQueue->file_count = $itemSize['fileCount'];
-        $localQueue->last_modified = date('Y-m-d H:i:s', $item->getMTime());
-        $localQueue->started_at = date('Y-m-d H:i:s');
-        $localQueue->target_dir = $target;
-
-        if ((bool)$localQueue->is_failed === true) {
-            $localQueue->is_failed = false;
-            $localQueue->retries++;
-        }
-
-        $localQueue->save();
-
-        return $localQueue;
     }
 
     /**
@@ -717,6 +666,50 @@ class Locomotive
         }
 
         return $this;
+    }
+
+    /**
+     * Records a transfer in the local queue.
+     *
+     * @param SplFileInfo $item The transfered item
+     * @param string $transferPath The absolute transfer path
+     *
+     * @return LocalQueue The Eloquent model
+     *
+     * @throws \InvalidArgumentException
+     **/
+    private function recordItemToQueue($item, $transferPath)
+    {
+        // get item size
+        $itemSize = $this->calculateRemoteItemSize($item);
+
+        // create a hash; clean `$transferPath`; get the mapped target for the item
+        $hash = $this->makeHash($item->getBasename(), $item->getMTime());
+        $transferPath = rtrim($transferPath, '/');
+        $target = $this->mapTargetFromSource($transferPath);
+        $name = $item->getBasename();
+
+        // write the item to the local DB queue
+        $localQueue = LocalQueue::firstOrNew(['hash' => $hash]);
+
+        $localQueue->run_id = $this->runId;
+        $localQueue->name = $name;
+        $localQueue->host = $this->arguments['host'];
+        $localQueue->source_dir = $transferPath;
+        $localQueue->size_bytes = $itemSize['itemSize'];
+        $localQueue->file_count = $itemSize['fileCount'];
+        $localQueue->last_modified = date('Y-m-d H:i:s', $item->getMTime());
+        $localQueue->started_at = date('Y-m-d H:i:s');
+        $localQueue->target_dir = $target;
+
+        if ((bool)$localQueue->is_failed === true) {
+            $localQueue->is_failed = false;
+            $localQueue->retries++;
+        }
+
+        $localQueue->save();
+
+        return $localQueue;
     }
 
     /**
@@ -949,34 +942,26 @@ class Locomotive
     }
 
     /**
-     * Creates an MD5 hash for an item to assist with unique identification.
+     * Gets a source path's mapped target path, or return the target path if no
+     * mapping is specified.
      *
-     * @param string $name The item name
-     * @param int $modTime Last modified time in unix timestamp format
+     * @param string $sourceDir The source directory to search for a mapped target
      *
-     * @return string MD5 Hash
+     * @return string A mapped target path
      **/
-    public function makeHash($name, $modTime)
+    private function mapTargetFromSource($sourceDir)
     {
-        $serial = serialize([$name, $modTime]);
+        if (is_array($this->arguments['target']) && is_array($this->arguments['source'])) {
+            // get the key for the matching array source
+            $matchingSource = array_filter($this->arguments['source'], function ($source) use ($sourceDir) {
+                return str_contains($source, rtrim($sourceDir, '/'));
+            }, ARRAY_FILTER_USE_BOTH);
 
-        return md5($serial);
-    }
-
-    /**
-     * A wrapping method to set global LFTP limits on the host.
-     *
-     * Current limits supported: speed, queue items
-     *
-     * @return Locomotive
-     **/
-    public function setLimits()
-    {
-        $this->lftp->setSpeedLimit($this->options['speed-limit'])
-                   ->setQueueTransferLimit($this->options['transfer-limit'])
-                   ->execute(false, $this->isLftpBackgrounded, $this->lftpTerminalId);
-
-        return $this;
+            // return the target path at the key matching the source, effectively mapping them together
+            return $this->arguments['target'][key($matchingSource)];
+        } else {
+            return $this->arguments['target'];
+        }
     }
 
     /**
@@ -1020,6 +1005,21 @@ class Locomotive
         }
 
         return $this;
+    }
+
+    /**
+     * Creates an MD5 hash for an item to assist with unique identification.
+     *
+     * @param string $name The item name
+     * @param int $modTime Last modified time in unix timestamp format
+     *
+     * @return string MD5 Hash
+     **/
+    public function makeHash($name, $modTime)
+    {
+        $serial = serialize([$name, $modTime]);
+
+        return md5($serial);
     }
 
     /**

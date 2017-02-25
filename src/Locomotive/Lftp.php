@@ -100,6 +100,11 @@ class Lftp
         $this->lftpPath = $this->options['lftp-path'] ?: 'lftp';
     }
 
+    /**
+     * Builds a connection command to the source server.
+     *
+     * @return Lftp
+     */
     public function connect()
     {
         if ($this->options['private-keyfile']) {
@@ -120,6 +125,13 @@ class Lftp
         return $this;
     }
 
+    /**
+     * Adds a global speed limit command.
+     *
+     * @param mixed $limit The speed limit in Bytes
+     *
+     * @return Lftp
+     */
     public function setSpeedLimit($limit)
     {
         $cmd = "set net:limit-total-rate $limit";
@@ -131,6 +143,13 @@ class Lftp
         return $this;
     }
 
+    /**
+     * Adds the parallel jobs limit command.
+     *
+     * @param mixed $limit The number of jobs to run in parallel
+     *
+     * @return Lftp
+     */
     public function setQueueTransferLimit($limit)
     {
         $cmd = "set cmd:queue-parallel $limit";
@@ -142,6 +161,14 @@ class Lftp
         return $this;
     }
 
+    /**
+     * Adds a directory listing command.
+     *
+     * @param string $path The directory to list
+     * @param bool $cls Whether to allow `cls` to format itself
+     *
+     * @return Lftp
+     */
     public function listDir($path, $cls = true)
     {
         $cmd = ($cls === true) ? "cls $path" : "ls $path";
@@ -151,6 +178,16 @@ class Lftp
         return $this;
     }
 
+    /**
+     * Builds a sourcing command for directory mirroring.
+     *
+     * @param string $path The absolute path to mirror
+     * @param bool $pget Use segmented transfers
+     * @param bool $parallel Download directory contents in parallel
+     * @param bool $queue Use the LFTP queue to issue the command
+     *
+     * @return Lftp
+     */
     public function mirrorDir($path, $pget = false, $parallel = false, $queue = false)
     {
         $cmd = 'mirror -c';
@@ -174,6 +211,15 @@ class Lftp
         return $this;
     }
 
+    /**
+     * Builds a sourcing command for segmented transfer of a file.
+     *
+     * @param string $path Absolute path to file
+     * @param mixed $conn If set, amount of connections to use for transfer
+     * @param bool $queue Use the LFTP queue to issue the command
+     *
+     * @return Lftp
+     */
     public function pgetFile($path, $conn = false, $queue = false)
     {
         $cmd = 'pget -c';
@@ -193,6 +239,16 @@ class Lftp
         return $this;
     }
 
+    /**
+     * Executes all commands in this Lftp builder instance. After execution, staged commands
+     * are cleared and a command log is generated for retreival.
+     *
+     * @param bool $detach Detaches from and backgrounds the parent LFTP process
+     * @param bool $attach Attempts to attach to a backgrounded LFTP process
+     * @param null $terminalId The PID of the backgrounded LFTP process to attach
+     *
+     * @return mixed The results of the command executions; The PID of detached process if `$detach` is `true`
+     */
     public function execute($detach = false, $attach = false, $terminalId = null)
     {
         $hasSourcingFile = false;
@@ -231,7 +287,7 @@ class Lftp
         $this->command = rtrim($this->command);
 
         if ($attach === true) {
-            $this->command .= '" | '. $this->lftpPath .' -c attach';
+            $this->command .= '" | ' . $this->lftpPath . ' -c attach';
 
             if (null !== $terminalId) {
                 $this->command .= " $terminalId";
@@ -267,6 +323,13 @@ class Lftp
         return $output;
     }
 
+    /**
+     * Adds a command to the builder.
+     *
+     * @param string $command Command to add
+     *
+     * @return Lftp
+     */
     public function addCommand($command)
     {
         $this->commands[] = $command;
@@ -274,6 +337,14 @@ class Lftp
         return $this;
     }
 
+    /**
+     * Adds a sourcing command to the builder, which is eventually written
+     * to a plain text file and processed with the LFTP `source` command.
+     *
+     * @param string $command Command to add
+     *
+     * @return Lftp
+     */
     public function addSourcingCommand($command)
     {
         $this->sourcingCommands[] = $command;
@@ -281,16 +352,31 @@ class Lftp
         return $this;
     }
 
+    /**
+     * Gets the current command.
+     *
+     * @return string
+     */
     public function getCommand()
     {
         return $this->command;
     }
 
+    /**
+     * Gets a log of executed commands.
+     *
+     * @return array
+     */
     public function getCommandLog()
     {
         return $this->commandLog;
     }
 
+    /**
+     * Gets the most recent executed command.
+     *
+     * @return string
+     */
     public function lastCommand()
     {
         return end($this->getCommandLog());

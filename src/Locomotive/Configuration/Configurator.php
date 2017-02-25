@@ -102,7 +102,7 @@ class Configurator
     }
 
     /**
-     * Loads user config from root of app.
+     * Loads user config.
      *
      * @return Configurator
      *
@@ -113,7 +113,7 @@ class Configurator
         $configLocations = [
             USERHOME . '/.config/locomotive/config.yml',
             USERHOME . '/.locomotive',
-            BASEPATH . '/config.yml'
+            BASEPATH . '/config.yml',
         ];
 
         $userConfigFound = false;
@@ -153,6 +153,13 @@ class Configurator
         return $this;
     }
 
+    /**
+     * Loads internal app config.
+     *
+     * @return Configurator
+     *
+     * @throws \Symfony\Component\Yaml\Exception\ParseException
+     **/
     private function loadAppConfiguration()
     {
         $appConfigFile = BASEPATH . '/app/config/locomotive.yml';

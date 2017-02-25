@@ -462,7 +462,7 @@ class Locomotive
                 $file = new \SplFileInfo($this->options['working-dir'] . $item->name);
 
                 if ($file->isFile() || $file->isDir()) {
-                    $itemSize = $this->calculateLocalItemSize($file);
+                    $itemSize = $this->calculateItemSize($file);
 
                     // check file size and mark as finished
                     if (
@@ -681,7 +681,7 @@ class Locomotive
     private function recordItemToQueue($item, $transferPath)
     {
         // get item size
-        $itemSize = $this->calculateRemoteItemSize($item);
+        $itemSize = $this->calculateItemSize($item);
 
         // create a hash; clean `$transferPath`; get the mapped target for the item
         $hash = $this->makeHash($item->getBasename(), $item->getMTime());
@@ -864,13 +864,13 @@ class Locomotive
     /**
      * Calculates the size and file count of an item.
      *
-     * @param SplFileInfo $item
+     * @param mixed $item
      *
      * @return array Item size and file count
      *
      * @throws \InvalidArgumentException
      **/
-    private function calculateRemoteItemSize(SplFileInfo $item)
+    private function calculateItemSize($item)
     {
         $itemSize = 0;
         $fileCount = 0;
@@ -886,47 +886,6 @@ class Locomotive
             foreach ($files as $file) {
                 if ($file->isFile()) {
                     $itemSize += $file->getSize();
-                    $fileCount++;
-                }
-            }
-        } elseif ($item->isFile()) {
-            $itemSize = $item->getSize();
-            $fileCount = 1;
-        }
-
-        return [
-            'itemSize' => $itemSize,
-            'fileCount' => $fileCount,
-        ];
-    }
-
-    /**
-     * Calculates the size and file count of an item.
-     *
-     * @param \SplFileInfo $item
-     *
-     * @return array Item size and file count
-     *
-     * @throws \InvalidArgumentException
-     *
-     * @todo Implement recursive iterator to count size of subdirectories
-     **/
-    private function calculateLocalItemSize(\SplFileInfo $item)
-    {
-        $itemSize = 0;
-        $fileCount = 0;
-
-        // file or dir specific data
-        if ($item->isDir()) {
-            // constrain search to source directory
-            foreach (new DirectoryIterator($item->getPathname()) as $subFile) {
-                if ($subFile->isDot()) {
-                    continue;
-                }
-
-                // calculate sums
-                if ($subFile->isFile()) {
-                    $itemSize += $subFile->getSize();
                     $fileCount++;
                 }
             }

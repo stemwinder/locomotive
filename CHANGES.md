@@ -1,5 +1,10 @@
 # Locomotive Change Log
 
+<a name="1.5.1"></a>
+## 1.5.1
+- Bugfix: Local item sizes were mismatching remote item sizes due to a lack of recrusiveness with PHP sFTP streams
+- Organizes, cleans, and documents code
+
 <a name="1.5.0"></a>
 ## 1.5.0
 - Removes support for source file deletion

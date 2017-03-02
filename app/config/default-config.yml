@@ -18,12 +18,12 @@ notifications:
     enable: false
     events: [transferStarted, transferComplete, transferFailed]
     api-key:
-  pushsafer:
-    enable: false
-    events: [transferStarted, transferComplete, transferFailed]
-    private-key:	
   pushover:
     enable: false
     events: [transferStarted, transferComplete, transferFailed]
     api-token:
     user-key:
+  pushsafer:
+    enable: false
+    events: [transferStarted, transferComplete, transferFailed]
+    private-key:

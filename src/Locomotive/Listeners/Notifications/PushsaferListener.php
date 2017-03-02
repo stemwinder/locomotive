@@ -58,14 +58,14 @@ class PushsaferListener extends AbstractListener
     public function handle(EventInterface $event, $param = null)
     {
         $logger = $this->logger;
-        $pushsaferConfg = $this->config['notifications']['pushsafer'];
+        $pushsaferConfig = $this->config['notifications']['pushsafer'];
         $eventName = $this->config['app']['language']['events'][explode('.', $event->getName())[1]];
 
         try {
             $client = new Client(['base_uri' => $this->endpoint]);
             $client->post($this->endpoint, [
                 'form_params' => [
-                    'k' => $pushsaferConfg['private-key'],
+                    'k' => $pushsaferConfig['private-key'],
                     't' => $eventName,
                     'm' => $param
                 ]

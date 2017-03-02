@@ -1,5 +1,10 @@
 # Locomotive Change Log
 
+<a name="1.5.2"></a>
+## 1.5.2
+- Adds support for additional notification service: Pushsafer
+- Notification events are now loaded to the configurator dynamically from the app's base config file
+
 <a name="1.5.1"></a>
 ## 1.5.1
 - Bugfix: Local item sizes were mismatching remote item sizes due to a lack of recrusiveness with PHP sFTP streams

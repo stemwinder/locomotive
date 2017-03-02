@@ -14,11 +14,29 @@
 
 namespace Locomotive\Configuration;
 
+use Symfony\Component\Config\Definition\Builder\ArrayNodeDefinition;
+use Symfony\Component\Config\Definition\Builder\NodeDefinition;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 
 class LocomoteConfiguration implements ConfigurationInterface
 {
+
+    /**
+     * @var array
+     */
+    protected $data;
+
+    /**
+     * LocomoteConfiguration constructor.
+     *
+     * @param array $data Extra data to use for configuration
+     */
+    public function __construct(array $data)
+    {
+        $this->data = $data;
+    }
+
     /**
      * Defines configuration options for the `locomote` default command.
      *
@@ -86,6 +104,11 @@ class LocomoteConfiguration implements ConfigurationInterface
         return $treeBuilder;
     }
 
+    /**
+     * A place to separate notifications config for readability and maintenance.
+     *
+     * @return ArrayNodeDefinition|NodeDefinition
+     */
     private function addNotificationsNode()
     {
         $treeBuilder = new TreeBuilder();
@@ -110,7 +133,7 @@ class LocomoteConfiguration implements ConfigurationInterface
                             ->performNoDeepMerging()
                             ->prototype('scalar')
                                 ->validate()
-                                    ->ifNotInArray(['transferStarted', 'transferComplete', 'transferFailed'])
+                                    ->ifNotInArray($this->data['events'])
                                     ->thenInvalid('%s')
                                 ->end()
                             ->end()
@@ -135,7 +158,7 @@ class LocomoteConfiguration implements ConfigurationInterface
                             ->performNoDeepMerging()
                             ->prototype('scalar')
                                 ->validate()
-                                    ->ifNotInArray(['transferStarted', 'transferComplete', 'transferFailed'])
+                                    ->ifNotInArray($this->data['events'])
                                     ->thenInvalid('%s')
                                 ->end()
                             ->end()
@@ -163,7 +186,7 @@ class LocomoteConfiguration implements ConfigurationInterface
                             ->performNoDeepMerging()
                             ->prototype('scalar')
                                 ->validate()
-                                    ->ifNotInArray(['transferStarted', 'transferComplete', 'transferFailed'])
+                                    ->ifNotInArray($this->data['events'])
                                     ->thenInvalid('%s')
                                 ->end()
                             ->end()

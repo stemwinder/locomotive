@@ -187,7 +187,9 @@ class Configurator
         $configs = array($this->defaults, $this->user, $this->cli);
 
         $processor = new Processor();
-        $configuration = new LocomoteConfiguration();
+        $configuration = new LocomoteConfiguration([
+            'events' => array_keys($this->app['language']['events']),
+        ]);
         $this->config = $processor->processConfiguration(
             $configuration,
             $configs

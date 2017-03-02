@@ -79,7 +79,7 @@ config file and customize as needed.
   * Example: `"/absolute/path/to/source": "/absolute/path/to/target"`
 * **post-processors** - If post-processing scripts are provided, they will be called in the order they are listed here with a single argument: the absolute path to the finished, moved item. Scripts should be expressed as a [YAML Sequence Collection](https://symfony.com/doc/current/components/yaml/yaml_format.html#collections).
   * Example: `- "/usr/local/bin/unrarall"` will be called as `/usr/local/bin/unrarall /path/to/item`.
-* **notifications** - Notification services. Current supported services: Prowl, Pushover, [Pushsafer](https://www.pushsafer.com).
+* **notifications** - Notification services. Current supported services: [Prowl](https://www.prowlapp.com), [Pushover](https://pushover.net), [Pushsafer](https://www.pushsafer.com).
   * **enable** - `true` or `false`
   * **events** - Array of events to listen for
     * Supported events: `transferStarted`, `transferComplete`, `transferFailed`

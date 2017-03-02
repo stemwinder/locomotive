@@ -1,5 +1,0 @@
-language:
-  events:
-    transferStarted: "New Transfer"
-    transferComplete: "Transfer Complete"
-    transferFailed: "Transfer Failure"

@@ -58,15 +58,15 @@ class PushoverListener extends AbstractListener
     public function handle(EventInterface $event, $param = null)
     {
         $logger = $this->logger;
-        $pushoverConfg = $this->config['notifications']['pushover'];
+        $pushoverConfig = $this->config['notifications']['pushover'];
         $eventName = $this->config['app']['language']['events'][explode('.', $event->getName())[1]];
 
         try {
             $client = new Client(['base_uri' => $this->endpoint]);
             $client->post($this->endpoint, [
                 'form_params' => [
-                    'token' => $pushoverConfg['api-token'],
-                    'user' => $pushoverConfg['user-key'],
+                    'token' => $pushoverConfig['api-token'],
+                    'user' => $pushoverConfig['user-key'],
                     'title' => $eventName,
                     'message' => $param
                 ]

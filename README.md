@@ -36,6 +36,7 @@ dependencies: `$ composer -v install --no-dev`
   * `app/storage/working`
 4. Ensure **Locomotive** can be executed: `$ chmod u+x locomotive`
 5. Get some information about **Locomotive**: `$ ./locomotive -h`
+6. Make sure the machine running **Locomotive** has trusted the SSH key of the host/source machine
 
 Configuration
 -------------
